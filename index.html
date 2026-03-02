@@ -1,0 +1,3392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Cart Race</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #1a1a2e;
+    font-family: 'Segoe UI', 'Comic Sans MS', Arial, sans-serif;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    width: 100vw;
+    touch-action: manipulation;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  #gameContainer {
+    position: relative;
+    width: 900px;
+    height: 600px;
+    max-width: 100vw;
+    max-height: 100vh;
+    background: #87CEEB;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 0 40px rgba(0,0,0,0.5);
+  }
+
+  /* Scale the game to fit the screen */
+  @media (max-width: 920px), (max-height: 620px) {
+    #gameContainer {
+      width: 100vw;
+      height: calc(100vw * 600 / 900);
+      max-height: 100vh;
+      border-radius: 0;
+    }
+    /* If height is the constraint, fit to height instead */
+    @supports (aspect-ratio: 3/2) {
+      #gameContainer {
+        width: min(100vw, calc(100vh * 900 / 600));
+        height: min(100vh, calc(100vw * 600 / 900));
+        aspect-ratio: 3 / 2;
+      }
+    }
+  }
+
+  canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+  }
+
+  .screen {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .screen.active { display: flex; }
+
+  /* ---- Title Screen ---- */
+  #titleScreen {
+    background: linear-gradient(180deg, #4fc3f7 0%, #81d4fa 40%, #a5d6a7 60%, #66bb6a 100%);
+  }
+
+  #titleScreen h1 {
+    font-size: 72px;
+    color: #fff;
+    text-shadow: 4px 4px 0 #e65100, 6px 6px 0 rgba(0,0,0,0.2);
+    margin-bottom: 10px;
+    letter-spacing: 4px;
+  }
+
+  #titleScreen .subtitle {
+    font-size: 20px;
+    color: #fff9c4;
+    text-shadow: 1px 1px 0 #333;
+    margin-bottom: 30px;
+  }
+
+  .btn {
+    padding: 14px 48px;
+    font-size: 24px;
+    font-weight: bold;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+  }
+
+  .btn:hover {
+    transform: scale(1.08);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+  }
+
+  .btn:active { transform: scale(0.97); }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #ff6f00, #ff8f00);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(255,111,0,0.4);
+  }
+
+  .btn-green {
+    background: linear-gradient(135deg, #43a047, #66bb6a);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(67,160,71,0.4);
+  }
+
+  .btn-blue {
+    background: linear-gradient(135deg, #1e88e5, #42a5f5);
+    color: #fff;
+    box-shadow: 0 4px 15px rgba(30,136,229,0.4);
+  }
+
+  .title-car-container {
+    width: 180px;
+    height: 80px;
+    margin-bottom: 20px;
+  }
+
+  /* ---- Selection Screen ---- */
+  #selectScreen {
+    background: linear-gradient(180deg, #e1bee7 0%, #f8bbd0 50%, #ffccbc 100%);
+    padding: 14px 20px;
+    gap: 6px;
+  }
+
+  #selectScreen h2 {
+    font-size: 32px;
+    color: #4a148c;
+    text-shadow: 2px 2px 0 rgba(255,255,255,0.5);
+    margin-bottom: 2px;
+  }
+
+  .select-section {
+    text-align: center;
+  }
+
+  .select-section h3 {
+    font-size: 17px;
+    color: #4a148c;
+    margin-bottom: 4px;
+  }
+
+  .option-group {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .option-btn {
+    padding: 8px 16px;
+    font-size: 15px;
+    font-weight: bold;
+    border: 3px solid transparent;
+    border-radius: 16px;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: rgba(255,255,255,0.7);
+    color: #333;
+  }
+
+  .option-btn:hover {
+    transform: scale(1.05);
+    background: rgba(255,255,255,0.95);
+  }
+
+  .option-btn.selected {
+    border-color: #ff6f00;
+    background: #fff;
+    box-shadow: 0 0 12px rgba(255,111,0,0.5);
+    transform: scale(1.05);
+  }
+
+  .car-option {
+    width: 80px;
+    height: 58px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+  }
+
+  .car-option canvas {
+    width: 72px;
+    height: 45px;
+  }
+
+  .driver-option {
+    width: 72px;
+    height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+  }
+
+  .driver-option canvas {
+    width: 64px;
+    height: 64px;
+  }
+
+  /* ---- Question Popup ---- */
+  #questionOverlay {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+
+  #questionOverlay.active { display: flex; }
+
+  .question-box {
+    background: linear-gradient(145deg, #fff, #f3e5f5);
+    border-radius: 20px;
+    padding: 28px 32px;
+    width: 520px;
+    max-width: 90%;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.4);
+    text-align: center;
+    animation: popIn 0.3s ease-out;
+  }
+
+  @keyframes popIn {
+    from { transform: scale(0.7); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .question-box .boost-label {
+    font-size: 14px;
+    color: #ff6f00;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 6px;
+  }
+
+  .question-box .q-text {
+    font-size: 22px;
+    color: #333;
+    margin-bottom: 20px;
+    line-height: 1.4;
+  }
+
+  .answer-btn {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    margin-bottom: 10px;
+    font-size: 18px;
+    font-weight: bold;
+    border: 3px solid #ce93d8;
+    border-radius: 14px;
+    background: #fff;
+    color: #4a148c;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .answer-btn:hover {
+    background: #f3e5f5;
+    border-color: #ab47bc;
+    transform: scale(1.02);
+  }
+
+  .answer-btn.correct {
+    background: #c8e6c9;
+    border-color: #43a047;
+    color: #2e7d32;
+  }
+
+  .answer-btn.wrong {
+    background: #ffcdd2;
+    border-color: #e53935;
+    color: #c62828;
+  }
+
+  .answer-btn:disabled {
+    cursor: default;
+    transform: none;
+  }
+
+  .result-text {
+    font-size: 20px;
+    font-weight: bold;
+    margin-top: 10px;
+    min-height: 30px;
+  }
+
+  /* ---- Finish Screen ---- */
+  #finishScreen {
+    background: linear-gradient(180deg, #311b92 0%, #4a148c 50%, #880e4f 100%);
+    padding: 20px;
+  }
+
+  #finishScreen h2 {
+    font-size: 42px;
+    color: #ffd54f;
+    text-shadow: 3px 3px 0 rgba(0,0,0,0.3);
+    margin-bottom: 10px;
+  }
+
+  .finish-buttons {
+    display: flex;
+    gap: 12px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .finish-buttons .btn { font-size: 18px; padding: 10px 28px; }
+
+  #finishPoints {
+    color: #ffd54f;
+    font-size: 18px;
+    font-weight: bold;
+    margin-top: 4px;
+  }
+
+  /* ---- Prize Screen ---- */
+  #prizeScreen {
+    background: linear-gradient(180deg, #1a237e 0%, #283593 40%, #3949ab 100%);
+    padding: 20px;
+    gap: 10px;
+  }
+
+  #prizeScreen h2 {
+    font-size: 36px;
+    color: #ffd54f;
+    text-shadow: 2px 2px 0 rgba(0,0,0,0.3);
+  }
+
+  .prize-total {
+    font-size: 22px;
+    color: #fff;
+    font-weight: bold;
+    margin-bottom: 6px;
+  }
+
+  .prize-list {
+    width: 90%;
+    max-width: 500px;
+    max-height: 320px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .prize-item {
+    display: flex;
+    align-items: center;
+    padding: 10px 16px;
+    border-radius: 14px;
+    font-size: 16px;
+    font-weight: bold;
+    transition: transform 0.15s;
+  }
+
+  .prize-item.earned {
+    background: linear-gradient(135deg, #43a047, #66bb6a);
+    color: #fff;
+    box-shadow: 0 2px 10px rgba(67,160,71,0.4);
+    cursor: pointer;
+  }
+
+  .prize-item.earned:active {
+    transform: scale(0.97);
+  }
+
+  .prize-item.locked {
+    background: rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.5);
+  }
+
+  /* Confirm Redeem Modal */
+  #redeemModal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  #redeemModal.active {
+    display: flex;
+  }
+  .redeem-box {
+    background: linear-gradient(135deg, #283593, #3949ab);
+    border-radius: 20px;
+    padding: 28px 24px;
+    max-width: 360px;
+    width: 85%;
+    text-align: center;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    border: 3px solid #ffd54f;
+  }
+  .redeem-box h3 {
+    color: #ffd54f;
+    font-size: 22px;
+    margin: 0 0 12px;
+  }
+  .redeem-box p {
+    color: #fff;
+    font-size: 16px;
+    margin: 8px 0;
+  }
+  .redeem-box .redeem-reward {
+    font-size: 20px;
+    font-weight: bold;
+    color: #81c784;
+    margin: 14px 0;
+  }
+  .redeem-box .redeem-cost {
+    color: #ef9a9a;
+    font-size: 15px;
+  }
+  .redeem-buttons {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 18px;
+  }
+
+  /* Prize Bin */
+  .prize-bin-label {
+    color: #ffd54f;
+    font-size: 20px;
+    font-weight: bold;
+    margin-top: 6px;
+    text-shadow: 1px 1px 0 rgba(0,0,0,0.3);
+  }
+  .prize-bin {
+    width: 90%;
+    max-width: 500px;
+    max-height: 140px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .prize-bin-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 14px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: bold;
+    background: linear-gradient(135deg, #6a1b9a, #8e24aa);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(106,27,154,0.4);
+  }
+  .prize-bin-item .prize-icon {
+    margin-right: 10px;
+    font-size: 18px;
+  }
+  .prize-bin-empty {
+    color: rgba(255,255,255,0.45);
+    font-size: 14px;
+    font-style: italic;
+  }
+
+  .prize-item .prize-pts {
+    min-width: 60px;
+    text-align: center;
+    margin-right: 12px;
+    font-size: 18px;
+  }
+
+  .prize-item .prize-icon {
+    margin-right: 10px;
+    font-size: 20px;
+  }
+
+  .prize-buttons {
+    display: flex;
+    gap: 12px;
+    margin-top: 10px;
+  }
+
+  /* ---- Power Icons HUD ---- */
+  #powerIcons {
+    position: absolute;
+    top: 32px;
+    left: 16px;
+    display: none;
+    gap: 8px;
+    z-index: 10;
+  }
+
+  .power-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: rgba(0,0,0,0.35);
+    border: 2px solid rgba(255,255,255,0.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.4;
+    transition: opacity 0.3s, border-color 0.3s, box-shadow 0.3s;
+  }
+
+  .power-icon.active {
+    opacity: 1;
+    border-color: #ce93d8;
+    box-shadow: 0 0 10px rgba(156,39,176,0.6);
+    background: rgba(74,20,140,0.5);
+  }
+
+  .power-icon canvas {
+    width: 28px;
+    height: 28px;
+  }
+
+  /* ---- Progress Bar ---- */
+  #progressBarContainer {
+    position: absolute;
+    top: 8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 300px;
+    height: 18px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 10px;
+    z-index: 10;
+    display: none;
+    border: 2px solid rgba(255,255,255,0.4);
+  }
+
+  #progressBarFill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #ffd54f, #ff6f00);
+    border-radius: 8px;
+    transition: width 0.3s;
+  }
+
+  #progressLabel {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: bold;
+    color: #fff;
+    text-shadow: 1px 1px 0 rgba(0,0,0,0.5);
+  }
+
+  #questionCounter {
+    position: absolute;
+    top: 8px;
+    right: 16px;
+    color: #fff;
+    font-size: 16px;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    z-index: 10;
+    display: none;
+  }
+
+  #placeIndicator {
+    position: absolute;
+    top: 8px;
+    left: 16px;
+    color: #ffd54f;
+    font-size: 16px;
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.5);
+    z-index: 10;
+    display: none;
+  }
+</style>
+</head>
+<body>
+<div id="gameContainer">
+  <canvas id="gameCanvas" width="900" height="600"></canvas>
+
+  <!-- Title Screen -->
+  <div id="titleScreen" class="screen active">
+    <div class="title-car-container">
+      <canvas id="titleCarCanvas" width="180" height="80"></canvas>
+    </div>
+    <h1>Cart Race</h1>
+    <p class="subtitle">Answer questions. Race to the finish!</p>
+    <button class="btn btn-primary" id="btnStart">Start</button>
+  </div>
+
+  <!-- Selection Screen -->
+  <div id="selectScreen" class="screen">
+    <h2>Set Up Your Race</h2>
+
+    <div class="select-section">
+      <h3>Category</h3>
+      <div class="option-group" id="categoryGroup">
+        <button class="option-btn selected" data-val="science">Science</button>
+        <button class="option-btn" data-val="history">History</button>
+        <button class="option-btn" data-val="math">Math</button>
+        <button class="option-btn" data-val="mix">Mix</button>
+      </div>
+    </div>
+
+    <div class="select-section">
+      <h3>Car Color</h3>
+      <div class="option-group" id="colorGroup">
+        <button class="option-btn car-option selected" data-val="pink">
+          <canvas class="carPreview" data-color="pink" width="80" height="50"></canvas>
+        </button>
+        <button class="option-btn car-option" data-val="purple">
+          <canvas class="carPreview" data-color="purple" width="80" height="50"></canvas>
+        </button>
+        <button class="option-btn car-option" data-val="blue">
+          <canvas class="carPreview" data-color="blue" width="80" height="50"></canvas>
+        </button>
+        <button class="option-btn car-option" data-val="green">
+          <canvas class="carPreview" data-color="green" width="80" height="50"></canvas>
+        </button>
+      </div>
+    </div>
+
+    <div class="select-section">
+      <h3>Driver</h3>
+      <div class="option-group" id="driverGroup">
+        <button class="option-btn driver-option selected" data-val="0">
+          <canvas class="driverPreview" data-driver="0" width="70" height="70"></canvas>
+        </button>
+        <button class="option-btn driver-option" data-val="1">
+          <canvas class="driverPreview" data-driver="1" width="70" height="70"></canvas>
+        </button>
+        <button class="option-btn driver-option" data-val="2">
+          <canvas class="driverPreview" data-driver="2" width="70" height="70"></canvas>
+        </button>
+        <button class="option-btn driver-option" data-val="3">
+          <canvas class="driverPreview" data-driver="3" width="70" height="70"></canvas>
+        </button>
+      </div>
+    </div>
+
+    <div class="select-section">
+      <h3>Level</h3>
+      <div class="option-group" id="levelGroup">
+        <button class="option-btn selected" data-val="1">Level 1 (K)</button>
+        <button class="option-btn" data-val="2">Level 2 (1st)</button>
+        <button class="option-btn" data-val="3">Level 3 (2nd)</button>
+        <button class="option-btn" data-val="4">Level 4 (3rd)</button>
+        <button class="option-btn" data-val="5">Level 5 (4th)</button>
+        <button class="option-btn" data-val="6">Level 6 (5th)</button>
+      </div>
+    </div>
+
+    <button class="btn btn-green" id="btnRace" style="margin-top: 10px;">Race!</button>
+  </div>
+
+  <!-- Question Overlay -->
+  <div id="questionOverlay">
+    <div class="question-box">
+      <div class="boost-label" id="boostLabel">Boost Question!</div>
+      <div class="q-text" id="qText"></div>
+      <div id="answersContainer"></div>
+      <div class="result-text" id="resultText"></div>
+    </div>
+  </div>
+
+  <!-- Finish Screen -->
+  <div id="finishScreen" class="screen">
+    <canvas id="finishCanvas" width="900" height="340"></canvas>
+    <h2 id="finishTitle"></h2>
+    <div id="finishStats" style="color:#fff;font-size:18px;margin-bottom:2px;"></div>
+    <div id="finishPoints"></div>
+    <div class="finish-buttons">
+      <button class="btn btn-green" id="btnRaceAgain">Race Again</button>
+      <button class="btn btn-primary" id="btnNextLevel" style="display:none;">Next Level</button>
+      <button class="btn btn-blue" id="btnPrizes">Prizes</button>
+      <button class="btn btn-blue" id="btnMainMenu">Main Menu</button>
+    </div>
+  </div>
+
+  <!-- Prize Screen -->
+  <div id="prizeScreen" class="screen">
+    <h2>Prize Shop</h2>
+    <div class="prize-total" id="prizeTotalPoints"></div>
+    <div class="prize-list" id="prizeList"></div>
+    <div class="prize-bin-label">My Prizes</div>
+    <div class="prize-bin" id="prizeBin"></div>
+    <div class="prize-buttons">
+      <button class="btn btn-green" id="btnPrizeBack">Back</button>
+      <button class="btn btn-primary" id="btnPrizeMainMenu">Main Menu</button>
+    </div>
+  </div>
+
+  <!-- Redeem Confirmation Modal -->
+  <div id="redeemModal">
+    <div class="redeem-box">
+      <h3>Redeem Prize?</h3>
+      <div class="redeem-reward" id="redeemReward"></div>
+      <p class="redeem-cost" id="redeemCost"></p>
+      <div class="redeem-buttons">
+        <button class="btn btn-green" id="btnRedeemYes">Yes!</button>
+        <button class="btn btn-blue" id="btnRedeemNo">No</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- HUD -->
+  <div id="progressBarContainer">
+    <div id="progressBarFill"></div>
+    <div id="progressLabel"></div>
+  </div>
+  <div id="questionCounter"></div>
+  <div id="placeIndicator"></div>
+  <div id="powerIcons">
+    <div class="power-icon" id="powerDragon" title="Dragon Form">
+      <canvas id="powerDragonCanvas" width="30" height="30"></canvas>
+    </div>
+    <div class="power-icon" id="powerInvisible" title="Invisible">
+      <canvas id="powerInvisibleCanvas" width="30" height="30"></canvas>
+    </div>
+  </div>
+</div>
+
+<script>
+// roundRect polyfill for older browsers
+if (!CanvasRenderingContext2D.prototype.roundRect) {
+  CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, radii) {
+    if (typeof radii === 'number') radii = [radii, radii, radii, radii];
+    if (Array.isArray(radii)) {
+      while (radii.length < 4) radii.push(radii[radii.length - 1] || 0);
+    }
+    const [tl, tr, br, bl] = radii;
+    this.moveTo(x + tl, y);
+    this.lineTo(x + w - tr, y);
+    this.quadraticCurveTo(x + w, y, x + w, y + tr);
+    this.lineTo(x + w, y + h - br);
+    this.quadraticCurveTo(x + w, y + h, x + w - br, y + h);
+    this.lineTo(x + bl, y + h);
+    this.quadraticCurveTo(x, y + h, x, y + h - bl);
+    this.lineTo(x, y + tl);
+    this.quadraticCurveTo(x, y, x + tl, y);
+    this.closePath();
+    return this;
+  };
+}
+
+// ============================================================
+//  QUESTION BANK
+// ============================================================
+const QUESTIONS = {
+  science: {
+    1: [
+      { question: "What do we breathe in?", choices: ["Air", "Water", "Sand", "Rocks"], correct: 0 },
+      { question: "What color is the sky on a sunny day?", choices: ["Blue", "Green", "Red", "Black"], correct: 0 },
+      { question: "Which animal says 'moo'?", choices: ["Cow", "Dog", "Cat", "Bird"], correct: 0 },
+      { question: "What falls from clouds when it rains?", choices: ["Water", "Milk", "Juice", "Sand"], correct: 0 },
+      { question: "How many legs does a dog have?", choices: ["4", "2", "6", "8"], correct: 0 },
+      { question: "Which is a fruit?", choices: ["Apple", "Bread", "Cheese", "Rice"], correct: 0 },
+      { question: "What gives us light during the day?", choices: ["The Sun", "The Moon", "A Lamp", "Stars"], correct: 0 },
+      { question: "What do fish live in?", choices: ["Water", "Sand", "Trees", "Clouds"], correct: 0 },
+      { question: "Which season is cold and snowy?", choices: ["Winter", "Summer", "Spring", "Fall"], correct: 0 },
+      { question: "What body part do we use to see?", choices: ["Eyes", "Ears", "Nose", "Mouth"], correct: 0 },
+      { question: "What color are most leaves?", choices: ["Green", "Blue", "Red", "White"], correct: 0 },
+      { question: "Which animal can fly?", choices: ["Bird", "Fish", "Dog", "Cat"], correct: 0 },
+      { question: "What do we use our ears for?", choices: ["Hearing", "Seeing", "Tasting", "Smelling"], correct: 0 },
+      { question: "Where do birds build their homes?", choices: ["In trees", "Under water", "In caves", "On the moon"], correct: 0 },
+      { question: "What do cows give us to drink?", choices: ["Milk", "Juice", "Soda", "Tea"], correct: 0 },
+      { question: "What is the color of snow?", choices: ["White", "Blue", "Pink", "Yellow"], correct: 0 },
+      { question: "Which animal lives in the ocean?", choices: ["Fish", "Dog", "Cat", "Chicken"], correct: 0 },
+      { question: "What do we drink when we are thirsty?", choices: ["Water", "Sand", "Rocks", "Paper"], correct: 0 },
+      { question: "What shape is a ball?", choices: ["Round", "Square", "Flat", "Pointy"], correct: 0 },
+      { question: "What comes out of a chicken egg?", choices: ["A chick", "A puppy", "A kitten", "A fish"], correct: 0 },
+      { question: "Which is hotter: the Sun or the Moon?", choices: ["The Sun", "The Moon", "They are the same", "Neither is hot"], correct: 0 },
+      { question: "How many ears do you have?", choices: ["2", "1", "3", "4"], correct: 0 },
+      { question: "What body part do you smell with?", choices: ["Nose", "Feet", "Hands", "Ears"], correct: 0 },
+      { question: "What do you do with food?", choices: ["Eat it", "Wear it", "Throw it", "Plant it"], correct: 0 },
+      { question: "Which animal has a long neck?", choices: ["Giraffe", "Dog", "Cat", "Fish"], correct: 0 },
+      { question: "What do we wear when it rains?", choices: ["A raincoat", "Pajamas", "A swimsuit", "Shorts"], correct: 0 },
+      { question: "What is the baby of a cat called?", choices: ["Kitten", "Puppy", "Cub", "Chick"], correct: 0 },
+      { question: "What do we see at night in the sky?", choices: ["Stars", "Rainbows", "Clouds only", "The Sun"], correct: 0 },
+      { question: "What grows on apple trees?", choices: ["Apples", "Carrots", "Bread", "Cheese"], correct: 0 },
+      { question: "Which is a vegetable?", choices: ["Carrot", "Cake", "Candy", "Ice cream"], correct: 0 },
+      { question: "How many eyes do you have?", choices: ["2", "1", "3", "4"], correct: 0 },
+      { question: "What does a duck say?", choices: ["Quack", "Moo", "Bark", "Meow"], correct: 0 },
+    ],
+    2: [
+      { question: "What do plants need to grow?", choices: ["Sunlight", "Candy", "Toys", "Darkness"], correct: 0 },
+      { question: "What is the biggest animal in the ocean?", choices: ["Blue Whale", "Goldfish", "Shark", "Turtle"], correct: 0 },
+      { question: "How many senses do we have?", choices: ["5", "3", "7", "2"], correct: 0 },
+      { question: "Which part of a plant is underground?", choices: ["Roots", "Leaves", "Flowers", "Stem"], correct: 0 },
+      { question: "What does a caterpillar turn into?", choices: ["Butterfly", "Spider", "Bee", "Ant"], correct: 0 },
+      { question: "What is water made of?", choices: ["Hydrogen and Oxygen", "Sugar and Salt", "Air and Fire", "Sand and Dirt"], correct: 0 },
+      { question: "Which animal hibernates in winter?", choices: ["Bear", "Chicken", "Cow", "Horse"], correct: 0 },
+      { question: "What force pulls things down to the ground?", choices: ["Gravity", "Wind", "Magnets", "Light"], correct: 0 },
+      { question: "Which planet do we live on?", choices: ["Earth", "Mars", "Jupiter", "Venus"], correct: 0 },
+      { question: "What do bees make?", choices: ["Honey", "Milk", "Bread", "Juice"], correct: 0 },
+      { question: "Where does the Sun go at night?", choices: ["It doesn't go anywhere, Earth rotates", "It hides behind clouds", "It falls into the ocean", "It turns off"], correct: 0 },
+      { question: "What is ice made of?", choices: ["Frozen water", "Frozen milk", "Frozen air", "Frozen sand"], correct: 0 },
+      { question: "What do tadpoles grow into?", choices: ["Frogs", "Fish", "Birds", "Snakes"], correct: 0 },
+      { question: "What is the green part of a plant called?", choices: ["Leaf", "Root", "Seed", "Bark"], correct: 0 },
+      { question: "How many wings does a butterfly have?", choices: ["4", "2", "6", "8"], correct: 0 },
+      { question: "What do we call baby dogs?", choices: ["Puppies", "Kittens", "Calves", "Foals"], correct: 0 },
+      { question: "Which sense do you use to taste food?", choices: ["Tongue", "Eyes", "Ears", "Hands"], correct: 0 },
+      { question: "What is the biggest land animal?", choices: ["Elephant", "Dog", "Horse", "Lion"], correct: 0 },
+      { question: "What covers a fish's body?", choices: ["Scales", "Fur", "Feathers", "Skin only"], correct: 0 },
+      { question: "What season do flowers bloom in?", choices: ["Spring", "Winter", "Fall", "None"], correct: 0 },
+      { question: "What does a seed need to sprout?", choices: ["Water", "Darkness", "Ice", "Candy"], correct: 0 },
+      { question: "Which animal has feathers?", choices: ["Bird", "Fish", "Snake", "Frog"], correct: 0 },
+      { question: "What is the moon made of?", choices: ["Rock", "Cheese", "Water", "Cotton"], correct: 0 },
+      { question: "How do fish breathe?", choices: ["Through gills", "Through lungs", "Through skin", "They don't breathe"], correct: 0 },
+      { question: "What kind of animal is a robin?", choices: ["Bird", "Mammal", "Reptile", "Fish"], correct: 0 },
+      { question: "What makes a shadow?", choices: ["Blocking light", "Wind", "Rain", "Snow"], correct: 0 },
+      { question: "What is the outer layer of a tree called?", choices: ["Bark", "Leaf", "Root", "Flower"], correct: 0 },
+      { question: "Which animal carries its house on its back?", choices: ["Turtle", "Dog", "Cat", "Bear"], correct: 0 },
+      { question: "What do plants give off that we breathe?", choices: ["Oxygen", "Smoke", "Dust", "Water"], correct: 0 },
+      { question: "How many legs does a spider have?", choices: ["8", "6", "4", "10"], correct: 0 },
+      { question: "Which planet is known as the Red Planet?", choices: ["Mars", "Earth", "Venus", "Jupiter"], correct: 0 },
+      { question: "What do worms live in?", choices: ["Soil", "Water", "Air", "Trees"], correct: 0 },
+    ],
+    3: [
+      { question: "What are the three states of matter?", choices: ["Solid, Liquid, Gas", "Hot, Cold, Warm", "Big, Small, Medium", "Fast, Slow, Still"], correct: 0 },
+      { question: "What is the closest star to Earth?", choices: ["The Sun", "The Moon", "Polaris", "Mars"], correct: 0 },
+      { question: "What do we call animals that eat only plants?", choices: ["Herbivores", "Carnivores", "Omnivores", "Insects"], correct: 0 },
+      { question: "How many bones does an adult human have?", choices: ["206", "100", "50", "500"], correct: 0 },
+      { question: "What gas do plants breathe in?", choices: ["Carbon Dioxide", "Oxygen", "Nitrogen", "Helium"], correct: 0 },
+      { question: "What is the hardest natural material?", choices: ["Diamond", "Gold", "Iron", "Wood"], correct: 0 },
+      { question: "Which organ pumps blood through our body?", choices: ["Heart", "Brain", "Lungs", "Stomach"], correct: 0 },
+      { question: "What causes a rainbow?", choices: ["Sunlight and rain", "Wind and clouds", "Thunder and snow", "Stars and moon"], correct: 0 },
+      { question: "How many legs does an insect have?", choices: ["6", "4", "8", "10"], correct: 0 },
+      { question: "What is the largest planet in our solar system?", choices: ["Jupiter", "Saturn", "Earth", "Mars"], correct: 0 },
+      { question: "What type of animal is a frog?", choices: ["Amphibian", "Reptile", "Mammal", "Fish"], correct: 0 },
+      { question: "What tool do we use to measure temperature?", choices: ["Thermometer", "Ruler", "Scale", "Clock"], correct: 0 },
+      { question: "What do we call animals that eat both plants and meat?", choices: ["Omnivores", "Herbivores", "Carnivores", "Decomposers"], correct: 0 },
+      { question: "What is the center of our solar system?", choices: ["The Sun", "Earth", "The Moon", "Jupiter"], correct: 0 },
+      { question: "What protects Earth from the Sun's harmful rays?", choices: ["The atmosphere", "The ocean", "Mountains", "Trees"], correct: 0 },
+      { question: "Which body system helps you breathe?", choices: ["Respiratory system", "Digestive system", "Skeletal system", "Muscular system"], correct: 0 },
+      { question: "What do we call the process of water turning into vapor?", choices: ["Evaporation", "Condensation", "Freezing", "Melting"], correct: 0 },
+      { question: "What is the largest organ in the human body?", choices: ["Skin", "Heart", "Brain", "Liver"], correct: 0 },
+      { question: "What type of rock is formed by a volcano?", choices: ["Igneous", "Sedimentary", "Metamorphic", "Sandstone"], correct: 0 },
+      { question: "Which animal is a mammal?", choices: ["Whale", "Shark", "Salmon", "Seahorse"], correct: 0 },
+      { question: "What do we call a scientist who studies dinosaurs?", choices: ["Paleontologist", "Astronaut", "Biologist", "Chemist"], correct: 0 },
+      { question: "How long does it take Earth to orbit the Sun?", choices: ["365 days", "30 days", "7 days", "100 days"], correct: 0 },
+      { question: "What gas do we breathe out?", choices: ["Carbon Dioxide", "Oxygen", "Nitrogen", "Helium"], correct: 0 },
+      { question: "What do carnivores eat?", choices: ["Meat", "Plants", "Rocks", "Sand"], correct: 0 },
+      { question: "How many continents are there?", choices: ["7", "5", "6", "8"], correct: 0 },
+      { question: "What is the boiling point of water?", choices: ["100°C / 212°F", "50°C / 122°F", "0°C / 32°F", "200°C / 392°F"], correct: 0 },
+      { question: "Which planet has rings?", choices: ["Saturn", "Mars", "Earth", "Venus"], correct: 0 },
+      { question: "What part of the plant makes seeds?", choices: ["Flower", "Root", "Leaf", "Stem"], correct: 0 },
+      { question: "What is the fastest land animal?", choices: ["Cheetah", "Lion", "Horse", "Dog"], correct: 0 },
+      { question: "What causes day and night?", choices: ["Earth spinning on its axis", "The Moon blocking the Sun", "Clouds covering the Sun", "The Sun moving around Earth"], correct: 0 },
+      { question: "What do reptiles have covering their skin?", choices: ["Scales", "Fur", "Feathers", "Slime"], correct: 0 },
+      { question: "What is the freezing point of water?", choices: ["0°C / 32°F", "100°C / 212°F", "50°C / 122°F", "-10°C / 14°F"], correct: 0 },
+    ],
+    4: [
+      { question: "What is the water cycle?", choices: ["Evaporation, condensation, precipitation", "Freezing, melting, boiling", "Sunrise, sunset, moonrise", "Spring, summer, fall, winter"], correct: 0 },
+      { question: "What type of energy comes from the Sun?", choices: ["Solar energy", "Wind energy", "Nuclear energy", "Mechanical energy"], correct: 0 },
+      { question: "What is the function of white blood cells?", choices: ["Fight infections", "Carry oxygen", "Digest food", "Build bones"], correct: 0 },
+      { question: "Which layer of Earth do we live on?", choices: ["Crust", "Mantle", "Outer core", "Inner core"], correct: 0 },
+      { question: "What is photosynthesis?", choices: ["How plants make food from sunlight", "How animals breathe", "How rocks form", "How water flows"], correct: 0 },
+      { question: "What are the tiny building blocks of life called?", choices: ["Cells", "Atoms", "Molecules", "Germs"], correct: 0 },
+      { question: "What type of animal is a snake?", choices: ["Reptile", "Amphibian", "Mammal", "Bird"], correct: 0 },
+      { question: "What planet is closest to the Sun?", choices: ["Mercury", "Venus", "Earth", "Mars"], correct: 0 },
+      { question: "What do we call a group of stars that form a pattern?", choices: ["Constellation", "Galaxy", "Nebula", "Asteroid"], correct: 0 },
+      { question: "What is the main gas in the air we breathe?", choices: ["Nitrogen", "Oxygen", "Carbon Dioxide", "Helium"], correct: 0 },
+      { question: "What is an ecosystem?", choices: ["Living and nonliving things interacting together", "A type of animal", "A kind of rock", "A weather pattern"], correct: 0 },
+      { question: "How many planets are in our solar system?", choices: ["8", "9", "7", "10"], correct: 0 },
+      { question: "What causes earthquakes?", choices: ["Tectonic plates moving", "Heavy rain", "Strong wind", "Volcanic eruptions only"], correct: 0 },
+      { question: "What is the job of the skeletal system?", choices: ["Support and protect the body", "Digest food", "Pump blood", "Fight germs"], correct: 0 },
+      { question: "What do we call an animal that sleeps during the day?", choices: ["Nocturnal", "Diurnal", "Hibernating", "Migrating"], correct: 0 },
+      { question: "What is condensation?", choices: ["Gas turning into liquid", "Liquid turning into gas", "Solid turning into liquid", "Liquid turning into solid"], correct: 0 },
+      { question: "What type of simple machine is a seesaw?", choices: ["Lever", "Pulley", "Wedge", "Screw"], correct: 0 },
+      { question: "What is the largest ocean on Earth?", choices: ["Pacific Ocean", "Atlantic Ocean", "Indian Ocean", "Arctic Ocean"], correct: 0 },
+      { question: "What do decomposers do?", choices: ["Break down dead matter", "Build nests", "Hunt prey", "Make honey"], correct: 0 },
+      { question: "Which organ helps us think?", choices: ["Brain", "Heart", "Lungs", "Stomach"], correct: 0 },
+      { question: "What are fossils?", choices: ["Remains of ancient living things", "Types of rocks", "Kinds of gems", "Pieces of metal"], correct: 0 },
+      { question: "What is the smallest planet in our solar system?", choices: ["Mercury", "Mars", "Pluto", "Venus"], correct: 0 },
+      { question: "What do herbivores eat?", choices: ["Plants", "Meat", "Rocks", "Insects only"], correct: 0 },
+      { question: "What holds us to the Earth?", choices: ["Gravity", "Magnets", "Air pressure", "Wind"], correct: 0 },
+      { question: "What is a habitat?", choices: ["Where an animal lives", "What an animal eats", "How an animal moves", "An animal's color"], correct: 0 },
+      { question: "What instrument measures wind speed?", choices: ["Anemometer", "Thermometer", "Barometer", "Ruler"], correct: 0 },
+      { question: "What is the process of a liquid becoming a solid?", choices: ["Freezing", "Melting", "Evaporating", "Condensing"], correct: 0 },
+      { question: "Which body part filters blood?", choices: ["Kidneys", "Heart", "Brain", "Lungs"], correct: 0 },
+      { question: "What causes the seasons?", choices: ["Earth's tilt on its axis", "Distance from the Sun", "The Moon's orbit", "Wind patterns"], correct: 0 },
+      { question: "What is a food chain?", choices: ["How energy passes from one living thing to another", "A list of recipes", "A type of restaurant", "A grocery store"], correct: 0 },
+      { question: "What are the three types of rocks?", choices: ["Igneous, sedimentary, metamorphic", "Big, medium, small", "Hard, soft, squishy", "Red, gray, white"], correct: 0 },
+      { question: "What does a barometer measure?", choices: ["Air pressure", "Temperature", "Wind speed", "Rainfall"], correct: 0 },
+    ],
+    5: [
+      { question: "What is the chemical symbol for water?", choices: ["H₂O", "CO₂", "O₂", "NaCl"], correct: 0 },
+      { question: "What part of the cell contains DNA?", choices: ["Nucleus", "Cell wall", "Membrane", "Cytoplasm"], correct: 0 },
+      { question: "What is the process by which organisms change over time?", choices: ["Evolution", "Erosion", "Evaporation", "Electricity"], correct: 0 },
+      { question: "What is the difference between a mixture and a solution?", choices: ["A solution is evenly mixed, a mixture may not be", "They are the same thing", "Mixtures are always liquids", "Solutions are always hot"], correct: 0 },
+      { question: "What is the powerhouse of the cell?", choices: ["Mitochondria", "Nucleus", "Cell membrane", "Ribosome"], correct: 0 },
+      { question: "What force opposes motion between surfaces?", choices: ["Friction", "Gravity", "Magnetism", "Buoyancy"], correct: 0 },
+      { question: "What is the outermost layer of Earth called?", choices: ["Crust", "Mantle", "Core", "Atmosphere"], correct: 0 },
+      { question: "What is the formula for calculating speed?", choices: ["Distance ÷ Time", "Time ÷ Distance", "Distance × Time", "Time + Distance"], correct: 0 },
+      { question: "What are producers in a food chain?", choices: ["Plants that make their own food", "Animals that hunt", "Animals that eat dead things", "Mushrooms"], correct: 0 },
+      { question: "What type of rock is marble?", choices: ["Metamorphic", "Igneous", "Sedimentary", "Mineral"], correct: 0 },
+      { question: "What is the function of the digestive system?", choices: ["Break down food for energy", "Pump blood", "Help you breathe", "Move your muscles"], correct: 0 },
+      { question: "Which layer of the atmosphere do we live in?", choices: ["Troposphere", "Stratosphere", "Mesosphere", "Thermosphere"], correct: 0 },
+      { question: "What is an atom?", choices: ["The smallest unit of an element", "A type of cell", "A kind of molecule", "A piece of rock"], correct: 0 },
+      { question: "What is the pH of pure water?", choices: ["7", "0", "14", "5"], correct: 0 },
+      { question: "What is Newton's first law of motion about?", choices: ["Objects at rest stay at rest unless acted on", "Every action has a reaction", "Force equals mass times acceleration", "Gravity pulls things down"], correct: 0 },
+      { question: "What is a renewable resource?", choices: ["Something that can be replaced naturally", "Something that runs out forever", "A type of fossil fuel", "A kind of metal"], correct: 0 },
+      { question: "What does the circulatory system transport?", choices: ["Blood", "Air", "Food", "Signals"], correct: 0 },
+      { question: "What causes tides in the ocean?", choices: ["The Moon's gravity", "Wind", "Fish swimming", "Underwater volcanoes"], correct: 0 },
+      { question: "What is the chemical symbol for table salt?", choices: ["NaCl", "H₂O", "CO₂", "Fe"], correct: 0 },
+      { question: "What type of energy is stored in food?", choices: ["Chemical energy", "Electrical energy", "Solar energy", "Kinetic energy"], correct: 0 },
+      { question: "What is the function of chlorophyll?", choices: ["Absorb sunlight for photosynthesis", "Transport water", "Store food", "Protect from insects"], correct: 0 },
+      { question: "What is the name for a community of living things and their environment?", choices: ["Ecosystem", "Population", "Species", "Habitat"], correct: 0 },
+      { question: "How does light travel?", choices: ["In straight lines", "In curves", "In circles", "In zigzags"], correct: 0 },
+      { question: "What is the largest internal organ?", choices: ["Liver", "Heart", "Brain", "Kidneys"], correct: 0 },
+      { question: "What is erosion?", choices: ["Wearing away of rock and soil", "Building up of mountains", "Growing of plants", "Freezing of water"], correct: 0 },
+      { question: "What are the building blocks of proteins?", choices: ["Amino acids", "Sugars", "Fats", "Vitamins"], correct: 0 },
+      { question: "What is a conductor?", choices: ["A material that electricity flows through easily", "A material that blocks electricity", "A type of insulator", "A kind of magnet"], correct: 0 },
+      { question: "What is the Milky Way?", choices: ["Our galaxy", "A planet", "A star", "A constellation"], correct: 0 },
+      { question: "What happens during condensation?", choices: ["Water vapor turns to liquid", "Ice turns to water", "Water turns to ice", "Water turns to vapor"], correct: 0 },
+      { question: "What is the role of the nervous system?", choices: ["Send signals between the brain and body", "Digest food", "Filter blood", "Build bones"], correct: 0 },
+      { question: "What planet is known for its Great Red Spot?", choices: ["Jupiter", "Mars", "Saturn", "Neptune"], correct: 0 },
+      { question: "What is the difference between weather and climate?", choices: ["Weather is short-term, climate is long-term", "They are the same", "Climate is daily, weather is yearly", "Weather is only about rain"], correct: 0 },
+    ],
+    6: [
+      { question: "What are the three subatomic particles?", choices: ["Protons, neutrons, electrons", "Atoms, molecules, cells", "Solids, liquids, gases", "Ions, isotopes, elements"], correct: 0 },
+      { question: "What is the law of conservation of energy?", choices: ["Energy cannot be created or destroyed", "Energy always increases", "Energy only comes from the Sun", "Energy disappears over time"], correct: 0 },
+      { question: "What is the difference between a physical and chemical change?", choices: ["Chemical changes create new substances, physical don't", "They are the same", "Physical changes are permanent", "Chemical changes can be reversed easily"], correct: 0 },
+      { question: "What is the function of red blood cells?", choices: ["Carry oxygen throughout the body", "Fight infections", "Clot blood", "Digest food"], correct: 0 },
+      { question: "What is density?", choices: ["Mass per unit volume", "Weight per area", "Speed per time", "Length per width"], correct: 0 },
+      { question: "What is the electromagnetic spectrum?", choices: ["The range of all types of electromagnetic radiation", "A tool for measuring light", "A type of telescope", "The colors of the rainbow only"], correct: 0 },
+      { question: "What is natural selection?", choices: ["Organisms best adapted to their environment survive", "Animals choosing where to live", "People selecting pets", "Plants growing toward sunlight"], correct: 0 },
+      { question: "What is the difference between a series and parallel circuit?", choices: ["Series has one path, parallel has multiple", "They are the same", "Parallel has one path", "Series uses batteries, parallel doesn't"], correct: 0 },
+      { question: "What layer of Earth is liquid iron?", choices: ["Outer core", "Inner core", "Mantle", "Crust"], correct: 0 },
+      { question: "What is the function of the ozone layer?", choices: ["Protect Earth from UV radiation", "Keep Earth warm", "Make rain", "Hold in oxygen"], correct: 0 },
+      { question: "What is homeostasis?", choices: ["The body maintaining a stable internal environment", "A type of disease", "A cell division process", "The way bones grow"], correct: 0 },
+      { question: "What is the difference between mass and weight?", choices: ["Mass is amount of matter, weight is force of gravity on mass", "They are the same", "Weight is in grams", "Mass changes with location"], correct: 0 },
+      { question: "What is an element?", choices: ["A substance made of only one type of atom", "A mixture of things", "A type of compound", "A form of energy"], correct: 0 },
+      { question: "What organelle carries out photosynthesis?", choices: ["Chloroplast", "Mitochondria", "Nucleus", "Ribosome"], correct: 0 },
+      { question: "What is inertia?", choices: ["An object's resistance to change in motion", "A type of friction", "A force that pulls objects together", "The speed of an object"], correct: 0 },
+      { question: "What is the water table?", choices: ["The top of underground water", "A table made of water", "Ocean surface level", "A type of wave"], correct: 0 },
+      { question: "What are plate tectonics?", choices: ["Large pieces of Earth's crust that move", "Types of earthquakes", "Volcanic rocks", "Mountain formations only"], correct: 0 },
+      { question: "What is the unit for measuring force?", choices: ["Newton", "Joule", "Watt", "Volt"], correct: 0 },
+      { question: "What is mitosis?", choices: ["Cell division producing two identical cells", "Cell death", "DNA copying errors", "Protein building"], correct: 0 },
+      { question: "What is a watershed?", choices: ["An area where water drains into a river or lake", "A type of dam", "A waterfall", "An underwater cave"], correct: 0 },
+      { question: "What is the difference between kinetic and potential energy?", choices: ["Kinetic is energy in motion, potential is stored energy", "They are the same", "Potential is moving energy", "Kinetic is stored energy"], correct: 0 },
+      { question: "What is the function of DNA?", choices: ["Store genetic information", "Provide energy", "Fight disease", "Digest food"], correct: 0 },
+      { question: "What type of wave is sound?", choices: ["Longitudinal", "Transverse", "Electromagnetic", "Light"], correct: 0 },
+      { question: "What is a compound?", choices: ["Two or more elements chemically combined", "A single element", "A physical mixture", "A type of metal"], correct: 0 },
+      { question: "What is the rock cycle?", choices: ["The process of rocks changing from one type to another", "Rocks rolling downhill", "Rocks forming only from volcanoes", "Rocks dissolving in water"], correct: 0 },
+      { question: "What is the function of stomata in plants?", choices: ["Allow gas exchange", "Absorb water", "Support the stem", "Store food"], correct: 0 },
+      { question: "What is a light-year?", choices: ["The distance light travels in one year", "One year on a planet near a star", "The brightness of a star", "The age of the Sun"], correct: 0 },
+      { question: "What is the pH scale used to measure?", choices: ["How acidic or basic a substance is", "Temperature", "Weight", "Speed"], correct: 0 },
+      { question: "What makes up most of the human body by weight?", choices: ["Water", "Bone", "Muscle", "Fat"], correct: 0 },
+      { question: "What is the relationship between predator and prey?", choices: ["Predators hunt and eat prey", "They help each other", "Prey hunts predators", "They ignore each other"], correct: 0 },
+      { question: "What is convection?", choices: ["Heat transfer through fluid movement", "Heat transfer through direct contact", "Heat transfer through waves", "Cooling by ice"], correct: 0 },
+      { question: "What is the function of vaccines?", choices: ["Train the immune system to fight diseases", "Cure existing diseases", "Provide vitamins", "Replace antibiotics"], correct: 0 },
+    ]
+  },
+  history: {
+    1: [
+      { question: "What holiday do we celebrate with fireworks in July?", choices: ["Independence Day", "Halloween", "Christmas", "Easter"], correct: 0 },
+      { question: "Who is on the one-dollar bill?", choices: ["George Washington", "Abraham Lincoln", "Santa Claus", "Mickey Mouse"], correct: 0 },
+      { question: "What do we call the leader of our country?", choices: ["President", "King", "Principal", "Coach"], correct: 0 },
+      { question: "What are the colors of the American flag?", choices: ["Red, White, and Blue", "Red and Yellow", "Green and Purple", "Black and Orange"], correct: 0 },
+      { question: "What holiday is in November when we give thanks?", choices: ["Thanksgiving", "Valentine's Day", "Halloween", "New Year's"], correct: 0 },
+      { question: "Where does the President live?", choices: ["The White House", "The Mall", "A Castle", "A School"], correct: 0 },
+      { question: "What shape has 50 stars on the American flag?", choices: ["Stars in a rectangle", "Circle", "Triangle", "Diamond"], correct: 0 },
+      { question: "What month do we celebrate Martin Luther King Jr.?", choices: ["January", "July", "December", "March"], correct: 0 },
+      { question: "What is the name of our country?", choices: ["United States of America", "Canada", "Mexico", "England"], correct: 0 },
+      { question: "On which holiday do kids dress in costumes?", choices: ["Halloween", "Thanksgiving", "Easter", "Independence Day"], correct: 0 },
+      { question: "What is a flag?", choices: ["A symbol for a country", "A type of food", "A kind of animal", "A game"], correct: 0 },
+      { question: "Who helps keep us safe in our town?", choices: ["Police officers", "Clowns", "Chefs", "Artists"], correct: 0 },
+      { question: "What do firefighters do?", choices: ["Put out fires and rescue people", "Cook food", "Teach school", "Build houses"], correct: 0 },
+      { question: "What do we celebrate on Valentine's Day?", choices: ["Love and friendship", "Scary stories", "New Year", "Summer vacation"], correct: 0 },
+      { question: "Who brings gifts on Christmas in many stories?", choices: ["Santa Claus", "The Easter Bunny", "A leprechaun", "A fairy"], correct: 0 },
+      { question: "What color is the Statue of Liberty?", choices: ["Green", "Silver", "Gold", "White"], correct: 0 },
+      { question: "What do mail carriers do?", choices: ["Deliver letters and packages", "Drive buses", "Cook food", "Build roads"], correct: 0 },
+      { question: "What holiday do we celebrate in February for presidents?", choices: ["Presidents' Day", "Labor Day", "Memorial Day", "Flag Day"], correct: 0 },
+      { question: "What does a teacher do?", choices: ["Helps kids learn", "Flies airplanes", "Fixes cars", "Cooks in restaurants"], correct: 0 },
+      { question: "Where do people vote?", choices: ["At a polling place", "At a playground", "At a store", "At a movie theater"], correct: 0 },
+      { question: "What is a community?", choices: ["A place where people live and work together", "A type of building", "A game", "A kind of food"], correct: 0 },
+      { question: "What does the bald eagle represent?", choices: ["The United States", "Canada", "Mexico", "England"], correct: 0 },
+      { question: "What do we call rules that everyone must follow?", choices: ["Laws", "Games", "Songs", "Stories"], correct: 0 },
+      { question: "Who is the leader of a school?", choices: ["Principal", "President", "Mayor", "Governor"], correct: 0 },
+      { question: "What holiday celebrates Irish culture in March?", choices: ["St. Patrick's Day", "Easter", "Halloween", "Thanksgiving"], correct: 0 },
+      { question: "What do we plant on Earth Day?", choices: ["Trees", "Flags", "Candles", "Signs"], correct: 0 },
+      { question: "What did Native Americans live in before Europeans came?", choices: ["This land (America)", "Europe", "Asia", "Australia"], correct: 0 },
+      { question: "What do doctors do?", choices: ["Help sick people get better", "Build bridges", "Fly planes", "Cook food"], correct: 0 },
+      { question: "What is a map?", choices: ["A drawing that shows places", "A type of game", "A kind of hat", "A song"], correct: 0 },
+      { question: "What does a mayor do?", choices: ["Leads a city or town", "Leads the whole country", "Teaches in schools", "Flies airplanes"], correct: 0 },
+      { question: "What is a globe?", choices: ["A round model of Earth", "A type of light", "A musical instrument", "A kind of hat"], correct: 0 },
+      { question: "Why do we have rules?", choices: ["To keep everyone safe and fair", "To make life boring", "For no reason", "Only for adults"], correct: 0 },
+    ],
+    2: [
+      { question: "Who was the first president of the United States?", choices: ["George Washington", "Abraham Lincoln", "Thomas Jefferson", "Ben Franklin"], correct: 0 },
+      { question: "What did the Pilgrims celebrate at the first Thanksgiving?", choices: ["A good harvest", "A birthday", "A snowstorm", "A race"], correct: 0 },
+      { question: "What is the Liberty Bell a symbol of?", choices: ["Freedom", "School", "Sports", "Music"], correct: 0 },
+      { question: "Who helped free enslaved people and is on the $5 bill?", choices: ["Abraham Lincoln", "George Washington", "Ben Franklin", "Thomas Edison"], correct: 0 },
+      { question: "What did Christopher Columbus sail across?", choices: ["The Atlantic Ocean", "A River", "A Lake", "The Sky"], correct: 0 },
+      { question: "What is the 4th of July also called?", choices: ["Independence Day", "Flag Day", "Memorial Day", "Labor Day"], correct: 0 },
+      { question: "What famous document starts with 'We the People'?", choices: ["The Constitution", "A Storybook", "A Letter", "A Poem"], correct: 0 },
+      { question: "Who was known for saying 'I have a dream'?", choices: ["Martin Luther King Jr.", "George Washington", "Ben Franklin", "Betsy Ross"], correct: 0 },
+      { question: "What country did the Pilgrims come from?", choices: ["England", "France", "Spain", "China"], correct: 0 },
+      { question: "What do we vote for on Election Day?", choices: ["Our leaders", "Our food", "Our toys", "Our pets"], correct: 0 },
+      { question: "Who sewed the first American flag (according to legend)?", choices: ["Betsy Ross", "Martha Washington", "Harriet Tubman", "Pocahontas"], correct: 0 },
+      { question: "What is the Statue of Liberty holding?", choices: ["A torch", "A sword", "A book", "A flower"], correct: 0 },
+      { question: "Who explored with Sacagawea?", choices: ["Lewis and Clark", "Columbus", "Pilgrims", "Ben Franklin"], correct: 0 },
+      { question: "What did the Mayflower carry?", choices: ["Pilgrims to America", "Gold to England", "Food to France", "Animals to Africa"], correct: 0 },
+      { question: "Where is the Statue of Liberty?", choices: ["New York", "Washington, D.C.", "California", "Texas"], correct: 0 },
+      { question: "What does the President do?", choices: ["Leads the country", "Teaches school", "Delivers mail", "Builds houses"], correct: 0 },
+      { question: "What are the first ten amendments called?", choices: ["The Bill of Rights", "The Constitution", "The Declaration", "The Pledge"], correct: 0 },
+      { question: "Who was Pocahontas?", choices: ["A Native American who helped settlers", "A president", "A queen of England", "A pirate"], correct: 0 },
+      { question: "What continent is the United States on?", choices: ["North America", "Europe", "Asia", "Africa"], correct: 0 },
+      { question: "What did Paul Revere warn about?", choices: ["The British are coming", "A storm is coming", "A fire started", "School is closed"], correct: 0 },
+      { question: "What holiday honors people who served in the military?", choices: ["Veterans Day", "Labor Day", "Earth Day", "New Year's"], correct: 0 },
+      { question: "What is the Declaration of Independence?", choices: ["A document saying America is free from Britain", "A holiday recipe", "A children's story", "A type of flag"], correct: 0 },
+      { question: "Who is the commander of the U.S. military?", choices: ["The President", "The Mayor", "The Principal", "The Governor"], correct: 0 },
+      { question: "What are states?", choices: ["Parts of a country", "Types of food", "Kinds of animals", "Styles of music"], correct: 0 },
+      { question: "Why did the Pilgrims leave England?", choices: ["For religious freedom", "For gold", "To find animals", "To go on vacation"], correct: 0 },
+      { question: "What are the three branches of government?", choices: ["Executive, Legislative, Judicial", "Army, Navy, Marines", "City, State, Country", "North, South, West"], correct: 0 },
+      { question: "What holiday honors workers in September?", choices: ["Labor Day", "Memorial Day", "Flag Day", "Presidents' Day"], correct: 0 },
+      { question: "Who helped people escape slavery on the Underground Railroad?", choices: ["Harriet Tubman", "George Washington", "Thomas Edison", "Ben Franklin"], correct: 0 },
+      { question: "What does the Pledge of Allegiance promise?", choices: ["Loyalty to the United States", "To eat vegetables", "To go to bed early", "To do homework"], correct: 0 },
+      { question: "How many states are in the United States?", choices: ["50", "13", "25", "100"], correct: 0 },
+      { question: "What was the first permanent English settlement?", choices: ["Jamestown", "Plymouth", "Boston", "New York"], correct: 0 },
+      { question: "What is the national anthem of the United States?", choices: ["The Star-Spangled Banner", "America the Beautiful", "God Bless America", "Yankee Doodle"], correct: 0 },
+    ],
+    3: [
+      { question: "Who was the first president of the United States?", choices: ["George Washington", "Abraham Lincoln", "Thomas Jefferson", "Ben Franklin"], correct: 0 },
+      { question: "What year did the United States declare independence?", choices: ["1776", "1900", "1492", "1865"], correct: 0 },
+      { question: "What did Lewis and Clark explore?", choices: ["The western United States", "The Moon", "The ocean floor", "Antarctica"], correct: 0 },
+      { question: "Who invented the light bulb?", choices: ["Thomas Edison", "Ben Franklin", "George Washington", "Alexander Graham Bell"], correct: 0 },
+      { question: "What was the Underground Railroad?", choices: ["A secret escape route for enslaved people", "A subway train", "A toy train", "A tunnel in a mine"], correct: 0 },
+      { question: "Which president freed the enslaved people?", choices: ["Abraham Lincoln", "George Washington", "Thomas Jefferson", "John Adams"], correct: 0 },
+      { question: "What did Ben Franklin discover about lightning?", choices: ["It is electricity", "It is fire", "It is magic", "It is water"], correct: 0 },
+      { question: "What ocean did the Mayflower cross?", choices: ["Atlantic Ocean", "Pacific Ocean", "Indian Ocean", "Arctic Ocean"], correct: 0 },
+      { question: "Who was Harriet Tubman?", choices: ["A leader who helped free enslaved people", "A president", "A queen", "A scientist"], correct: 0 },
+      { question: "What do the stripes on the flag stand for?", choices: ["The 13 original colonies", "The 50 states", "The 7 continents", "The 12 months"], correct: 0 },
+      { question: "What did the colonists dump into Boston Harbor?", choices: ["Tea", "Sugar", "Coffee", "Milk"], correct: 0 },
+      { question: "What is the capital of the United States?", choices: ["Washington, D.C.", "New York City", "Los Angeles", "Chicago"], correct: 0 },
+      { question: "Who wrote the Declaration of Independence?", choices: ["Thomas Jefferson", "George Washington", "Ben Franklin", "John Adams"], correct: 0 },
+      { question: "What war was fought to end slavery?", choices: ["The Civil War", "The Revolutionary War", "World War I", "World War II"], correct: 0 },
+      { question: "Who was the 16th president?", choices: ["Abraham Lincoln", "George Washington", "Thomas Jefferson", "Theodore Roosevelt"], correct: 0 },
+      { question: "What did the colonists fight for in the Revolutionary War?", choices: ["Independence from Britain", "More tea", "Gold", "Land in Africa"], correct: 0 },
+      { question: "What was the first colony?", choices: ["Virginia", "Massachusetts", "New York", "Pennsylvania"], correct: 0 },
+      { question: "Who was Rosa Parks?", choices: ["A civil rights leader who refused to give up her bus seat", "A president", "An astronaut", "A teacher"], correct: 0 },
+      { question: "What did the Emancipation Proclamation do?", choices: ["Freed enslaved people in Confederate states", "Started a war", "Built a railroad", "Created a holiday"], correct: 0 },
+      { question: "What famous speech did Lincoln give at Gettysburg?", choices: ["The Gettysburg Address", "I Have a Dream", "The Star-Spangled Banner", "The Pledge of Allegiance"], correct: 0 },
+      { question: "Who was the king of England during the Revolutionary War?", choices: ["King George III", "King Henry VIII", "King James I", "King Charles I"], correct: 0 },
+      { question: "What document is the supreme law of the United States?", choices: ["The Constitution", "The Declaration of Independence", "The Bill of Rights", "The Mayflower Compact"], correct: 0 },
+      { question: "What were the first 13 states called?", choices: ["Colonies", "Provinces", "Territories", "Countries"], correct: 0 },
+      { question: "Who was Johnny Appleseed?", choices: ["A man who planted apple trees across America", "A president", "A general", "A king"], correct: 0 },
+      { question: "What was the name of Abraham Lincoln's famous home state?", choices: ["Illinois", "Virginia", "New York", "Texas"], correct: 0 },
+      { question: "What did the Gold Rush cause people to do?", choices: ["Move west to find gold", "Move to Europe", "Stay home", "Go fishing"], correct: 0 },
+      { question: "Who invented the telephone?", choices: ["Alexander Graham Bell", "Thomas Edison", "Ben Franklin", "Eli Whitney"], correct: 0 },
+      { question: "What is the Bill of Rights?", choices: ["The first 10 amendments to the Constitution", "A shopping list", "A map", "A type of money"], correct: 0 },
+      { question: "What year did the Civil War end?", choices: ["1865", "1776", "1900", "1492"], correct: 0 },
+      { question: "What was the Pony Express?", choices: ["A mail delivery service using horses", "A type of train", "A horse race", "A type of coin"], correct: 0 },
+      { question: "Who was Sitting Bull?", choices: ["A famous Native American leader", "A president", "An explorer", "A British general"], correct: 0 },
+      { question: "What amendment gave women the right to vote?", choices: ["The 19th Amendment", "The 1st Amendment", "The 13th Amendment", "The 5th Amendment"], correct: 0 },
+    ],
+    4: [
+      { question: "What was the Trail of Tears?", choices: ["Forced relocation of Native Americans", "A hiking trail", "A river", "A type of road"], correct: 0 },
+      { question: "Who was the first woman to fly solo across the Atlantic?", choices: ["Amelia Earhart", "Betsy Ross", "Harriet Tubman", "Rosa Parks"], correct: 0 },
+      { question: "What was the Industrial Revolution?", choices: ["A shift from farming to factory work", "A type of war", "A political party", "A school reform"], correct: 0 },
+      { question: "What amendment abolished slavery?", choices: ["13th Amendment", "1st Amendment", "19th Amendment", "5th Amendment"], correct: 0 },
+      { question: "Who was Theodore Roosevelt?", choices: ["The 26th president who loved nature", "The first president", "A Civil War general", "An inventor"], correct: 0 },
+      { question: "What was the Louisiana Purchase?", choices: ["Land bought from France that doubled the U.S.", "A store", "A type of food", "A battle"], correct: 0 },
+      { question: "What was the Alamo?", choices: ["A famous battle in Texas", "A type of car", "A river", "A mountain"], correct: 0 },
+      { question: "Who was Frederick Douglass?", choices: ["A formerly enslaved person who became a leader", "A president", "An inventor", "A general"], correct: 0 },
+      { question: "What country gave us the Statue of Liberty?", choices: ["France", "England", "Spain", "Germany"], correct: 0 },
+      { question: "What was the Oregon Trail?", choices: ["A route pioneers used to move west", "A hiking trail", "A railroad", "A river"], correct: 0 },
+      { question: "Who was Susan B. Anthony?", choices: ["A leader in the women's rights movement", "A president", "A scientist", "A soldier"], correct: 0 },
+      { question: "What war was fought between the North and South?", choices: ["The Civil War", "World War I", "The Revolutionary War", "The War of 1812"], correct: 0 },
+      { question: "What did Eli Whitney invent?", choices: ["The cotton gin", "The telephone", "The light bulb", "The airplane"], correct: 0 },
+      { question: "What is Manifest Destiny?", choices: ["The belief that the U.S. should expand west", "A type of ship", "A holiday", "A type of government"], correct: 0 },
+      { question: "Who were the Buffalo Soldiers?", choices: ["African American soldiers after the Civil War", "Cowboys", "Explorers", "Native American warriors"], correct: 0 },
+      { question: "What was the Transcontinental Railroad?", choices: ["A railroad across the entire U.S.", "A subway system", "A horse trail", "A bridge"], correct: 0 },
+      { question: "What year did women get the right to vote?", choices: ["1920", "1776", "1865", "1900"], correct: 0 },
+      { question: "Who was Sacagawea?", choices: ["A Shoshone woman who guided Lewis and Clark", "A president's wife", "A British queen", "A soldier"], correct: 0 },
+      { question: "What were Jim Crow laws?", choices: ["Laws that enforced racial segregation", "Traffic laws", "Tax laws", "School rules"], correct: 0 },
+      { question: "What was the Boston Massacre?", choices: ["British soldiers shooting colonists", "A food fight", "A sports event", "A celebration"], correct: 0 },
+      { question: "Who drew the famous 'Join or Die' cartoon?", choices: ["Ben Franklin", "George Washington", "Thomas Jefferson", "Paul Revere"], correct: 0 },
+      { question: "What was the Erie Canal?", choices: ["A waterway connecting the Great Lakes to the Atlantic", "A river in Europe", "A type of boat", "A railroad"], correct: 0 },
+      { question: "What did the Monroe Doctrine say?", choices: ["Europe should stay out of the Americas", "Everyone should go west", "Slavery should end", "The president is king"], correct: 0 },
+      { question: "Who was Sojourner Truth?", choices: ["An abolitionist and women's rights activist", "A president", "A general", "A scientist"], correct: 0 },
+      { question: "What was the Missouri Compromise?", choices: ["An agreement about slavery in new states", "A peace treaty", "A trade deal", "A railroad plan"], correct: 0 },
+      { question: "What was the War of 1812 about?", choices: ["The U.S. fighting Britain again", "The Civil War", "The Revolutionary War", "A war with Mexico"], correct: 0 },
+      { question: "Who was Andrew Jackson?", choices: ["The 7th president", "The 1st president", "A Civil War general", "An inventor"], correct: 0 },
+      { question: "What was the Homestead Act?", choices: ["Gave free land to settlers out west", "A tax law", "A voting law", "A school law"], correct: 0 },
+      { question: "Who was John Brown?", choices: ["An abolitionist who raided Harpers Ferry", "A president", "A British general", "An inventor"], correct: 0 },
+      { question: "What was the significance of Fort Sumter?", choices: ["Where the Civil War started", "Where the Revolution ended", "A trading post", "The first school"], correct: 0 },
+      { question: "What does 'amendment' mean?", choices: ["A change or addition to the Constitution", "A type of law", "A holiday", "A battle"], correct: 0 },
+      { question: "Who was Clara Barton?", choices: ["Founder of the American Red Cross", "A president", "A general", "A teacher only"], correct: 0 },
+    ],
+    5: [
+      { question: "What caused World War I?", choices: ["Assassination of Archduke Franz Ferdinand and alliances", "The sinking of the Titanic", "A trade dispute", "A sports rivalry"], correct: 0 },
+      { question: "What was the Great Depression?", choices: ["A severe economic downturn in the 1930s", "A sad movie", "A type of weather", "A war"], correct: 0 },
+      { question: "Who was Franklin D. Roosevelt?", choices: ["President during the Great Depression and WWII", "The first president", "A Civil War general", "An inventor"], correct: 0 },
+      { question: "What was D-Day?", choices: ["The Allied invasion of Normandy in WWII", "The last day of school", "A holiday", "The start of the Civil War"], correct: 0 },
+      { question: "What was the Holocaust?", choices: ["The genocide of six million Jewish people by Nazis", "A type of storm", "A battle", "A holiday"], correct: 0 },
+      { question: "Who was Eleanor Roosevelt?", choices: ["A First Lady and human rights champion", "An inventor", "A general", "A scientist"], correct: 0 },
+      { question: "What was the New Deal?", choices: ["FDR's programs to help during the Great Depression", "A card game", "A peace treaty", "A trade agreement"], correct: 0 },
+      { question: "What were the Roaring Twenties?", choices: ["A decade of economic growth and cultural change", "A type of storm", "A war", "A disease"], correct: 0 },
+      { question: "Who were the Allied Powers in WWII?", choices: ["U.S., Britain, France, Soviet Union", "Germany, Japan, Italy", "Only the U.S.", "China and India"], correct: 0 },
+      { question: "What was Pearl Harbor?", choices: ["A surprise Japanese attack on the U.S. in 1941", "A type of ship", "A harbor in England", "A Civil War battle"], correct: 0 },
+      { question: "What was the Cold War?", choices: ["A political rivalry between the U.S. and Soviet Union", "A war fought in winter", "A battle over ice", "A conflict about food"], correct: 0 },
+      { question: "Who was Jackie Robinson?", choices: ["The first African American in Major League Baseball", "A president", "An astronaut", "A general"], correct: 0 },
+      { question: "What was the Marshall Plan?", choices: ["U.S. aid to rebuild Europe after WWII", "A battle strategy", "A type of government", "A railroad plan"], correct: 0 },
+      { question: "What was the Dust Bowl?", choices: ["Severe dust storms in the 1930s Great Plains", "A football game", "A cooking contest", "A type of bowl"], correct: 0 },
+      { question: "Who was Harry Truman?", choices: ["President who decided to drop atomic bombs on Japan", "The first president", "A Civil War general", "An inventor"], correct: 0 },
+      { question: "What was Prohibition?", choices: ["A ban on making and selling alcohol", "A ban on driving", "A ban on voting", "A ban on traveling"], correct: 0 },
+      { question: "What was the League of Nations?", choices: ["An organization formed after WWI for peace", "A sports league", "A type of army", "A school group"], correct: 0 },
+      { question: "What was the 19th Amendment?", choices: ["Gave women the right to vote", "Freed enslaved people", "Established Prohibition", "Created the presidency"], correct: 0 },
+      { question: "Who was Winston Churchill?", choices: ["British Prime Minister during WWII", "A U.S. president", "A French king", "A German general"], correct: 0 },
+      { question: "What was the Manhattan Project?", choices: ["The secret project to build the atomic bomb", "A building project in New York", "A bridge", "A park"], correct: 0 },
+      { question: "What was the significance of the Battle of Gettysburg?", choices: ["Turning point of the Civil War", "Start of the Revolution", "End of WWII", "Start of WWI"], correct: 0 },
+      { question: "Who were the Axis Powers in WWII?", choices: ["Germany, Italy, Japan", "U.S., Britain, France", "Russia and China", "Canada and Australia"], correct: 0 },
+      { question: "What was Ellis Island?", choices: ["An immigration station in New York Harbor", "A prison", "A military base", "A park"], correct: 0 },
+      { question: "What was the Spanish-American War about?", choices: ["U.S. fighting Spain over Cuba and territories", "Trade with Mexico", "A border dispute with Canada", "A civil rights conflict"], correct: 0 },
+      { question: "Who was Dwight D. Eisenhower?", choices: ["WWII general and 34th president", "The first president", "A Civil War general", "An inventor"], correct: 0 },
+      { question: "What was the GI Bill?", choices: ["Benefits for WWII veterans including education", "A tax law", "A military rank", "A type of weapon"], correct: 0 },
+      { question: "What was the Harlem Renaissance?", choices: ["A cultural movement celebrating African American art", "A type of building", "A war", "A political party"], correct: 0 },
+      { question: "What was V-E Day?", choices: ["Victory in Europe Day ending WWII in Europe", "Valentine's Day", "Veterans Day", "A voting day"], correct: 0 },
+      { question: "What was the Lend-Lease Act?", choices: ["U.S. supplying allies with war materials before joining WWII", "A rental agreement", "A peace treaty", "A tax law"], correct: 0 },
+      { question: "Who was Rosie the Riveter?", choices: ["A symbol of women working in factories during WWII", "A president's wife", "A soldier", "A nurse"], correct: 0 },
+      { question: "What happened at Hiroshima?", choices: ["The U.S. dropped an atomic bomb in 1945", "A peace treaty was signed", "A volcano erupted", "An earthquake struck"], correct: 0 },
+      { question: "What was the Reconstruction era?", choices: ["Rebuilding the South after the Civil War", "Building railroads", "Constructing the White House", "Making new states"], correct: 0 },
+    ],
+    6: [
+      { question: "What was the Civil Rights Movement?", choices: ["A struggle for equal rights for African Americans", "A type of war", "A sports event", "A science fair"], correct: 0 },
+      { question: "What was the Space Race?", choices: ["Competition between U.S. and Soviet Union to explore space", "A car race", "A running race", "A swimming contest"], correct: 0 },
+      { question: "Who was John F. Kennedy?", choices: ["The 35th president assassinated in 1963", "The first president", "A Civil War general", "An astronaut"], correct: 0 },
+      { question: "What was the Vietnam War?", choices: ["A conflict between North and South Vietnam with U.S. involvement", "A European war", "A trade dispute", "A civil rights event"], correct: 0 },
+      { question: "Who was Neil Armstrong?", choices: ["The first person to walk on the Moon", "The first president", "An inventor", "A general"], correct: 0 },
+      { question: "What was the Berlin Wall?", choices: ["A wall dividing East and West Berlin during the Cold War", "A castle wall", "A garden wall", "A school wall"], correct: 0 },
+      { question: "What was the Civil Rights Act of 1964?", choices: ["A law banning discrimination based on race, color, religion, or sex", "A tax law", "A military law", "A school rule"], correct: 0 },
+      { question: "Who was Cesar Chavez?", choices: ["A labor leader who fought for farm workers' rights", "A president", "A general", "A scientist"], correct: 0 },
+      { question: "What happened on September 11, 2001?", choices: ["Terrorist attacks on the World Trade Center and Pentagon", "A hurricane", "An earthquake", "A power outage"], correct: 0 },
+      { question: "What was the Cuban Missile Crisis?", choices: ["A standoff between U.S. and Soviet Union over missiles in Cuba", "A baseball game", "A hurricane", "A trade deal"], correct: 0 },
+      { question: "Who was Thurgood Marshall?", choices: ["The first African American Supreme Court Justice", "A president", "A general", "An inventor"], correct: 0 },
+      { question: "What was the Gulf War?", choices: ["A conflict when Iraq invaded Kuwait in 1990", "A fishing dispute", "A trade agreement", "A sports event"], correct: 0 },
+      { question: "What was Brown v. Board of Education?", choices: ["A Supreme Court case ending school segregation", "A football game", "A school name", "A textbook"], correct: 0 },
+      { question: "Who was Richard Nixon?", choices: ["President who resigned due to Watergate", "The first president", "A Civil War general", "An astronaut"], correct: 0 },
+      { question: "What was the Women's Liberation Movement?", choices: ["A movement for women's equality", "A type of exercise", "A music festival", "A cooking show"], correct: 0 },
+      { question: "What was the Apollo 11 mission?", choices: ["The first Moon landing in 1969", "A space station", "A satellite launch", "A Mars mission"], correct: 0 },
+      { question: "Who was Malcolm X?", choices: ["A civil rights leader who advocated for Black empowerment", "A president", "A scientist", "An astronaut"], correct: 0 },
+      { question: "What was the Watergate scandal?", choices: ["A political scandal that led to Nixon's resignation", "A water park", "A bridge collapse", "A flood"], correct: 0 },
+      { question: "What was the Iron Curtain?", choices: ["The division between communist Eastern Europe and the West", "A type of curtain", "A theater show", "A castle gate"], correct: 0 },
+      { question: "Who was Sandra Day O'Connor?", choices: ["The first woman on the Supreme Court", "A president", "A general", "An astronaut"], correct: 0 },
+      { question: "What was the Camp David Accords?", choices: ["A peace agreement between Egypt and Israel", "A summer camp", "A military base", "A type of music"], correct: 0 },
+      { question: "What was the significance of Sputnik?", choices: ["First artificial satellite, launched by Soviet Union", "A type of car", "A planet", "A type of food"], correct: 0 },
+      { question: "Who was Martin Luther King Jr.'s famous letter written from?", choices: ["Birmingham Jail", "The White House", "A school", "A church in Atlanta"], correct: 0 },
+      { question: "What was NAFTA?", choices: ["A trade agreement between U.S., Canada, and Mexico", "A military alliance", "A space program", "A school system"], correct: 0 },
+      { question: "What did the Voting Rights Act of 1965 do?", choices: ["Banned racial discrimination in voting", "Created new states", "Built highways", "Started a war"], correct: 0 },
+      { question: "Who was Ronald Reagan?", choices: ["The 40th president known for ending the Cold War era", "The first president", "A Civil War general", "An inventor"], correct: 0 },
+      { question: "What was the Environmental Movement?", choices: ["A push to protect nature and fight pollution", "A type of exercise", "A military campaign", "A music genre"], correct: 0 },
+      { question: "What year did the Berlin Wall fall?", choices: ["1989", "1776", "1945", "2001"], correct: 0 },
+      { question: "Who was the first African American president?", choices: ["Barack Obama", "George Washington", "Abraham Lincoln", "John F. Kennedy"], correct: 0 },
+      { question: "What was the purpose of the United Nations?", choices: ["Promote peace and cooperation between countries", "Run the U.S. military", "Control world trade", "Govern all countries"], correct: 0 },
+      { question: "What was the Montgomery Bus Boycott?", choices: ["A protest against segregated buses", "A bus company sale", "A bus race", "A field trip"], correct: 0 },
+      { question: "What was the March on Washington?", choices: ["A 1963 rally where MLK gave his 'I Have a Dream' speech", "A military march", "A parade for a holiday", "A marathon"], correct: 0 },
+    ]
+  },
+  math: {
+    1: [
+      { question: "What is 1 + 1?", choices: ["2", "3", "1", "4"], correct: 0 },
+      { question: "What is 2 + 1?", choices: ["3", "4", "2", "5"], correct: 0 },
+      { question: "What is 3 + 2?", choices: ["5", "4", "6", "3"], correct: 0 },
+      { question: "How many sides does a triangle have?", choices: ["3", "4", "5", "2"], correct: 0 },
+      { question: "What is 4 + 1?", choices: ["5", "6", "3", "7"], correct: 0 },
+      { question: "Which number comes after 7?", choices: ["8", "6", "9", "5"], correct: 0 },
+      { question: "What is 2 + 2?", choices: ["4", "3", "5", "6"], correct: 0 },
+      { question: "How many sides does a square have?", choices: ["4", "3", "5", "6"], correct: 0 },
+      { question: "What is 5 + 0?", choices: ["5", "0", "6", "4"], correct: 0 },
+      { question: "Which is bigger: 3 or 5?", choices: ["5", "3", "They're equal", "Neither"], correct: 0 },
+      { question: "What is 1 + 3?", choices: ["4", "5", "3", "2"], correct: 0 },
+      { question: "How many fingers do you have on one hand?", choices: ["5", "4", "6", "10"], correct: 0 },
+      { question: "What is 3 + 3?", choices: ["6", "5", "7", "4"], correct: 0 },
+      { question: "What is 4 + 2?", choices: ["6", "5", "7", "8"], correct: 0 },
+      { question: "Which number comes before 5?", choices: ["4", "6", "3", "7"], correct: 0 },
+      { question: "What is 0 + 4?", choices: ["4", "0", "5", "3"], correct: 0 },
+      { question: "How many corners does a rectangle have?", choices: ["4", "3", "5", "6"], correct: 0 },
+      { question: "What is 5 + 1?", choices: ["6", "5", "7", "4"], correct: 0 },
+      { question: "What is 2 + 3?", choices: ["5", "4", "6", "3"], correct: 0 },
+      { question: "Which is smaller: 8 or 4?", choices: ["4", "8", "They're equal", "Neither"], correct: 0 },
+      { question: "What is 1 + 0?", choices: ["1", "0", "2", "10"], correct: 0 },
+      { question: "How many sides does a circle have?", choices: ["0", "1", "2", "3"], correct: 0 },
+      { question: "What is 4 + 4?", choices: ["8", "6", "7", "9"], correct: 0 },
+      { question: "What is 3 + 1?", choices: ["4", "5", "2", "6"], correct: 0 },
+      { question: "Which number is between 2 and 4?", choices: ["3", "1", "5", "6"], correct: 0 },
+      { question: "What is 5 + 2?", choices: ["7", "6", "8", "5"], correct: 0 },
+      { question: "How many toes do you have?", choices: ["10", "5", "8", "20"], correct: 0 },
+      { question: "What is 1 + 4?", choices: ["5", "4", "6", "3"], correct: 0 },
+      { question: "What is 5 + 5?", choices: ["10", "8", "9", "11"], correct: 0 },
+      { question: "Which number is the biggest: 2, 7, or 4?", choices: ["7", "2", "4", "They're all equal"], correct: 0 },
+      { question: "What is 3 + 0?", choices: ["3", "0", "4", "30"], correct: 0 },
+      { question: "What is 2 + 4?", choices: ["6", "5", "7", "4"], correct: 0 },
+    ],
+    2: [
+      { question: "What is 5 + 7?", choices: ["12", "11", "13", "10"], correct: 0 },
+      { question: "What is 10 - 4?", choices: ["6", "5", "7", "8"], correct: 0 },
+      { question: "What is 8 + 6?", choices: ["14", "12", "15", "13"], correct: 0 },
+      { question: "What is 15 - 7?", choices: ["8", "9", "7", "6"], correct: 0 },
+      { question: "What is 3 + 9?", choices: ["12", "11", "13", "10"], correct: 0 },
+      { question: "How many sides does a hexagon have?", choices: ["6", "5", "7", "8"], correct: 0 },
+      { question: "What is 7 + 7?", choices: ["14", "12", "13", "15"], correct: 0 },
+      { question: "What is 16 - 8?", choices: ["8", "7", "9", "6"], correct: 0 },
+      { question: "What is double 6?", choices: ["12", "8", "10", "14"], correct: 0 },
+      { question: "Which number is even: 7, 3, 8, or 5?", choices: ["8", "7", "3", "5"], correct: 0 },
+      { question: "What is 9 + 5?", choices: ["14", "13", "15", "12"], correct: 0 },
+      { question: "What is 20 - 10?", choices: ["10", "11", "9", "8"], correct: 0 },
+      { question: "What is 6 + 8?", choices: ["14", "12", "15", "13"], correct: 0 },
+      { question: "What is 11 - 5?", choices: ["6", "7", "5", "8"], correct: 0 },
+      { question: "What is 4 + 8?", choices: ["12", "10", "11", "13"], correct: 0 },
+      { question: "What is 13 - 6?", choices: ["7", "8", "6", "9"], correct: 0 },
+      { question: "What is double 8?", choices: ["16", "14", "18", "12"], correct: 0 },
+      { question: "Which number is odd: 6, 10, 9, or 4?", choices: ["9", "6", "10", "4"], correct: 0 },
+      { question: "What is 7 + 6?", choices: ["13", "12", "14", "11"], correct: 0 },
+      { question: "What is 18 - 9?", choices: ["9", "8", "10", "7"], correct: 0 },
+      { question: "What is 5 + 8?", choices: ["13", "12", "14", "11"], correct: 0 },
+      { question: "What is half of 10?", choices: ["5", "4", "6", "3"], correct: 0 },
+      { question: "What is 6 + 6?", choices: ["12", "10", "11", "14"], correct: 0 },
+      { question: "What is 14 - 7?", choices: ["7", "6", "8", "5"], correct: 0 },
+      { question: "What is 8 + 9?", choices: ["17", "16", "18", "15"], correct: 0 },
+      { question: "What is 12 - 5?", choices: ["7", "6", "8", "5"], correct: 0 },
+      { question: "What is double 7?", choices: ["14", "12", "16", "10"], correct: 0 },
+      { question: "What is 9 + 9?", choices: ["18", "16", "17", "19"], correct: 0 },
+      { question: "What is 17 - 8?", choices: ["9", "8", "10", "7"], correct: 0 },
+      { question: "What is half of 14?", choices: ["7", "6", "8", "5"], correct: 0 },
+      { question: "What is 6 + 7?", choices: ["13", "12", "14", "11"], correct: 0 },
+      { question: "What is 19 - 10?", choices: ["9", "8", "10", "11"], correct: 0 },
+    ],
+    3: [
+      { question: "What is 12 + 19?", choices: ["31", "29", "32", "30"], correct: 0 },
+      { question: "What is 45 - 18?", choices: ["27", "23", "28", "33"], correct: 0 },
+      { question: "What is 6 × 3?", choices: ["18", "15", "21", "12"], correct: 0 },
+      { question: "What is 24 ÷ 4?", choices: ["6", "8", "5", "7"], correct: 0 },
+      { question: "What is 7 × 5?", choices: ["35", "30", "40", "25"], correct: 0 },
+      { question: "What is 100 - 37?", choices: ["63", "67", "73", "57"], correct: 0 },
+      { question: "What is 8 × 4?", choices: ["32", "28", "36", "24"], correct: 0 },
+      { question: "How many inches are in a foot?", choices: ["12", "10", "6", "8"], correct: 0 },
+      { question: "What is 56 + 27?", choices: ["83", "73", "93", "81"], correct: 0 },
+      { question: "What is 9 × 6?", choices: ["54", "48", "56", "63"], correct: 0 },
+      { question: "What is half of 50?", choices: ["25", "30", "20", "15"], correct: 0 },
+      { question: "What is 3 × 9?", choices: ["27", "24", "21", "30"], correct: 0 },
+      { question: "What is 34 + 28?", choices: ["62", "52", "72", "58"], correct: 0 },
+      { question: "What is 70 - 25?", choices: ["45", "55", "35", "50"], correct: 0 },
+      { question: "What is 5 × 7?", choices: ["35", "30", "40", "25"], correct: 0 },
+      { question: "What is 36 ÷ 6?", choices: ["6", "5", "7", "8"], correct: 0 },
+      { question: "What is 4 × 8?", choices: ["32", "28", "36", "24"], correct: 0 },
+      { question: "What is 81 - 34?", choices: ["47", "57", "37", "53"], correct: 0 },
+      { question: "What is 6 × 6?", choices: ["36", "30", "42", "24"], correct: 0 },
+      { question: "What is 42 ÷ 7?", choices: ["6", "5", "7", "8"], correct: 0 },
+      { question: "What is 48 + 35?", choices: ["83", "73", "93", "78"], correct: 0 },
+      { question: "What is 90 - 46?", choices: ["44", "54", "34", "56"], correct: 0 },
+      { question: "What is 7 × 8?", choices: ["56", "48", "64", "42"], correct: 0 },
+      { question: "What is 54 ÷ 9?", choices: ["6", "7", "5", "8"], correct: 0 },
+      { question: "What is double 25?", choices: ["50", "45", "55", "40"], correct: 0 },
+      { question: "What is 63 + 29?", choices: ["92", "82", "102", "88"], correct: 0 },
+      { question: "What is 8 × 7?", choices: ["56", "54", "48", "63"], correct: 0 },
+      { question: "What is 72 ÷ 8?", choices: ["9", "8", "7", "10"], correct: 0 },
+      { question: "How many minutes are in an hour?", choices: ["60", "30", "100", "45"], correct: 0 },
+      { question: "What is 5 × 9?", choices: ["45", "40", "50", "35"], correct: 0 },
+      { question: "What is 200 - 85?", choices: ["115", "125", "105", "95"], correct: 0 },
+      { question: "What is 11 × 3?", choices: ["33", "30", "36", "27"], correct: 0 },
+    ],
+    4: [
+      { question: "What is 456 + 278?", choices: ["734", "724", "744", "634"], correct: 0 },
+      { question: "What is 1,000 - 387?", choices: ["613", "623", "713", "603"], correct: 0 },
+      { question: "What is 12 × 8?", choices: ["96", "84", "108", "92"], correct: 0 },
+      { question: "What is 144 ÷ 12?", choices: ["12", "11", "13", "14"], correct: 0 },
+      { question: "What is the perimeter of a square with sides of 7?", choices: ["28", "14", "21", "49"], correct: 0 },
+      { question: "What is 3/4 as a decimal?", choices: ["0.75", "0.25", "0.50", "0.34"], correct: 0 },
+      { question: "What is the area of a rectangle 5 × 8?", choices: ["40", "13", "26", "35"], correct: 0 },
+      { question: "What is 15 × 6?", choices: ["90", "80", "75", "95"], correct: 0 },
+      { question: "What is 1/2 + 1/4?", choices: ["3/4", "2/4", "1/4", "2/6"], correct: 0 },
+      { question: "How many ounces are in a pound?", choices: ["16", "12", "8", "32"], correct: 0 },
+      { question: "What is 325 + 489?", choices: ["814", "804", "914", "714"], correct: 0 },
+      { question: "What is 800 - 256?", choices: ["544", "554", "644", "534"], correct: 0 },
+      { question: "What is 11 × 11?", choices: ["121", "111", "132", "110"], correct: 0 },
+      { question: "What is 96 ÷ 8?", choices: ["12", "11", "13", "14"], correct: 0 },
+      { question: "How many feet are in a yard?", choices: ["3", "2", "4", "6"], correct: 0 },
+      { question: "What is 2/3 of 12?", choices: ["8", "6", "9", "4"], correct: 0 },
+      { question: "What is the perimeter of a rectangle 6 × 10?", choices: ["32", "60", "16", "26"], correct: 0 },
+      { question: "What is 14 × 7?", choices: ["98", "84", "91", "105"], correct: 0 },
+      { question: "What is 1/3 + 1/3?", choices: ["2/3", "1/3", "2/6", "1/6"], correct: 0 },
+      { question: "How many cups are in a quart?", choices: ["4", "2", "8", "3"], correct: 0 },
+      { question: "What is 567 - 289?", choices: ["278", "288", "268", "378"], correct: 0 },
+      { question: "What is 13 × 5?", choices: ["65", "55", "75", "60"], correct: 0 },
+      { question: "What is 108 ÷ 9?", choices: ["12", "11", "13", "10"], correct: 0 },
+      { question: "What is 25% of 100?", choices: ["25", "50", "75", "10"], correct: 0 },
+      { question: "What is the area of a square with sides of 9?", choices: ["81", "36", "18", "72"], correct: 0 },
+      { question: "What is 3/5 of 20?", choices: ["12", "10", "15", "8"], correct: 0 },
+      { question: "How many millimeters are in a centimeter?", choices: ["10", "100", "1000", "1"], correct: 0 },
+      { question: "What is 16 × 4?", choices: ["64", "48", "56", "72"], correct: 0 },
+      { question: "What is 1,234 + 5,678?", choices: ["6,912", "6,812", "7,012", "6,902"], correct: 0 },
+      { question: "What is 150 ÷ 5?", choices: ["30", "25", "35", "20"], correct: 0 },
+      { question: "What is 50% of 80?", choices: ["40", "30", "50", "60"], correct: 0 },
+      { question: "What is 7 × 12?", choices: ["84", "72", "96", "78"], correct: 0 },
+    ],
+    5: [
+      { question: "What is 3.5 + 2.7?", choices: ["6.2", "5.2", "6.7", "5.7"], correct: 0 },
+      { question: "What is 15% of 200?", choices: ["30", "15", "20", "40"], correct: 0 },
+      { question: "What is the volume of a cube with sides of 4?", choices: ["64", "16", "12", "48"], correct: 0 },
+      { question: "What is 5/8 as a decimal?", choices: ["0.625", "0.58", "0.85", "0.525"], correct: 0 },
+      { question: "What is 2³?", choices: ["8", "6", "9", "4"], correct: 0 },
+      { question: "What is -5 + 8?", choices: ["3", "-3", "13", "-13"], correct: 0 },
+      { question: "What is the least common multiple of 4 and 6?", choices: ["12", "24", "6", "2"], correct: 0 },
+      { question: "What is 7.2 - 3.8?", choices: ["3.4", "4.4", "3.6", "4.6"], correct: 0 },
+      { question: "What is the greatest common factor of 12 and 18?", choices: ["6", "3", "12", "9"], correct: 0 },
+      { question: "What is 4/5 × 10?", choices: ["8", "6", "10", "5"], correct: 0 },
+      { question: "How many degrees are in a right angle?", choices: ["90", "180", "45", "360"], correct: 0 },
+      { question: "What is 1,000 × 0.1?", choices: ["100", "10", "1,000", "10,000"], correct: 0 },
+      { question: "What is 2/3 + 1/6?", choices: ["5/6", "3/6", "1/2", "3/9"], correct: 0 },
+      { question: "What is 45 × 12?", choices: ["540", "450", "500", "480"], correct: 0 },
+      { question: "What is 0.25 × 40?", choices: ["10", "100", "8", "15"], correct: 0 },
+      { question: "How many degrees are in a straight line?", choices: ["180", "90", "360", "45"], correct: 0 },
+      { question: "What is 3² + 4²?", choices: ["25", "12", "7", "49"], correct: 0 },
+      { question: "What is 5/6 - 1/3?", choices: ["1/2", "1/3", "2/3", "4/6"], correct: 0 },
+      { question: "What is the mean of 4, 6, 8, 10?", choices: ["7", "6", "8", "28"], correct: 0 },
+      { question: "What is 8.5 × 4?", choices: ["34", "32", "36", "30"], correct: 0 },
+      { question: "What is 360 ÷ 4?", choices: ["90", "80", "100", "120"], correct: 0 },
+      { question: "What is 1/4 of 48?", choices: ["12", "16", "8", "24"], correct: 0 },
+      { question: "What is the perimeter of an equilateral triangle with sides of 9?", choices: ["27", "18", "36", "81"], correct: 0 },
+      { question: "What is 6.3 + 4.9?", choices: ["11.2", "10.2", "11.9", "10.9"], correct: 0 },
+      { question: "What is 72 ÷ 0.9?", choices: ["80", "72", "90", "8"], correct: 0 },
+      { question: "What is 10³?", choices: ["1,000", "100", "30", "10,000"], correct: 0 },
+      { question: "What is 3/4 - 1/2?", choices: ["1/4", "1/2", "2/4", "3/8"], correct: 0 },
+      { question: "What is 125% as a decimal?", choices: ["1.25", "12.5", "0.125", "125"], correct: 0 },
+      { question: "What is the area of a triangle with base 10 and height 6?", choices: ["30", "60", "16", "36"], correct: 0 },
+      { question: "What is 2.5 × 2.5?", choices: ["6.25", "5.0", "5.25", "7.5"], correct: 0 },
+      { question: "What is 20% of 150?", choices: ["30", "20", "15", "25"], correct: 0 },
+      { question: "What is the median of 3, 7, 9, 1, 5?", choices: ["5", "3", "7", "9"], correct: 0 },
+    ],
+    6: [
+      { question: "What is the value of π (pi) rounded to two decimals?", choices: ["3.14", "3.41", "2.14", "3.24"], correct: 0 },
+      { question: "Solve for x: 3x + 5 = 20", choices: ["5", "3", "7", "15"], correct: 0 },
+      { question: "What is the area of a circle with radius 5? (Use π ≈ 3.14)", choices: ["78.5", "31.4", "15.7", "157"], correct: 0 },
+      { question: "What is -8 × -3?", choices: ["24", "-24", "-11", "11"], correct: 0 },
+      { question: "What is 2/3 ÷ 1/4?", choices: ["8/3", "2/12", "1/6", "6/4"], correct: 0 },
+      { question: "What is the circumference of a circle with diameter 10? (Use π ≈ 3.14)", choices: ["31.4", "15.7", "78.5", "62.8"], correct: 0 },
+      { question: "What is 5⁴?", choices: ["625", "20", "125", "500"], correct: 0 },
+      { question: "Solve: 2(x - 3) = 10", choices: ["8", "5", "3", "10"], correct: 0 },
+      { question: "What is the ratio 15:25 in simplest form?", choices: ["3:5", "1:2", "5:3", "15:25"], correct: 0 },
+      { question: "What is 40% of 250?", choices: ["100", "40", "150", "80"], correct: 0 },
+      { question: "What is the volume of a rectangular prism 3 × 4 × 5?", choices: ["60", "12", "20", "35"], correct: 0 },
+      { question: "What is -12 + (-8)?", choices: ["-20", "20", "-4", "4"], correct: 0 },
+      { question: "What is 3/8 + 5/8?", choices: ["1", "8/8", "8/16", "2"], correct: 0 },
+      { question: "What is the square root of 144?", choices: ["12", "14", "11", "13"], correct: 0 },
+      { question: "Solve for x: x/4 = 9", choices: ["36", "13", "5", "2.25"], correct: 0 },
+      { question: "What is 0.6 as a fraction?", choices: ["3/5", "6/100", "1/6", "2/3"], correct: 0 },
+      { question: "What is the surface area of a cube with sides of 3?", choices: ["54", "27", "18", "9"], correct: 0 },
+      { question: "What is -15 - (-7)?", choices: ["-8", "-22", "8", "22"], correct: 0 },
+      { question: "What is 7/10 as a percent?", choices: ["70%", "7%", "17%", "710%"], correct: 0 },
+      { question: "What is the mode of 2, 3, 3, 5, 7?", choices: ["3", "2", "5", "4"], correct: 0 },
+      { question: "Solve: 5x - 10 = 25", choices: ["7", "5", "3", "15"], correct: 0 },
+      { question: "What is 1.5 × 10³?", choices: ["1,500", "150", "15,000", "15"], correct: 0 },
+      { question: "What is the probability of flipping heads on a fair coin?", choices: ["1/2", "1/4", "1/3", "1"], correct: 0 },
+      { question: "What are complementary angles?", choices: ["Two angles that add up to 90°", "Two angles that add up to 180°", "Equal angles", "Right angles"], correct: 0 },
+      { question: "What is 9² - 4²?", choices: ["65", "5", "13", "97"], correct: 0 },
+      { question: "What is 2/5 of 45?", choices: ["18", "9", "22.5", "15"], correct: 0 },
+      { question: "What is the absolute value of -17?", choices: ["17", "-17", "0", "1"], correct: 0 },
+      { question: "Solve: 4(x + 2) = 24", choices: ["4", "6", "2", "8"], correct: 0 },
+      { question: "What is the range of 12, 5, 8, 15, 3?", choices: ["12", "8", "15", "5"], correct: 0 },
+      { question: "What is 75% as a fraction in simplest form?", choices: ["3/4", "75/100", "7/5", "1/4"], correct: 0 },
+      { question: "What type of angle is 120°?", choices: ["Obtuse", "Acute", "Right", "Straight"], correct: 0 },
+      { question: "What is the order of operations rule called?", choices: ["PEMDAS", "ABCDE", "FOIL", "HOMES"], correct: 0 },
+    ]
+  }
+};
+
+// ============================================================
+//  CONSTANTS & GLOBALS
+// ============================================================
+// ============================================================
+//  PRIZES & POINTS
+// ============================================================
+const PRIZES = [
+  { points: 20, reward: '15 minutes later bedtime on weekend' },
+  { points: 40, reward: 'Extra treat with dinner' },
+  { points: 60, reward: '5 minutes of tickle monster' },
+  { points: 80, reward: '10 minutes of tickle monster' },
+  { points: 100, reward: '15 minutes extra tablet time' },
+  { points: 120, reward: '30 minutes extra tablet time' },
+  { points: 500, reward: 'Hyper Kidz or Sky Zone' }
+];
+
+// Load/save total points from localStorage
+function loadTotalPoints() {
+  try { return parseInt(localStorage.getItem('cartRacePoints')) || 0; } catch(e) { return 0; }
+}
+function saveTotalPoints(pts) {
+  try { localStorage.setItem('cartRacePoints', pts); } catch(e) {}
+}
+let totalPoints = loadTotalPoints();
+
+// Load/save redeemed prizes from localStorage
+function loadRedeemedPrizes() {
+  try { return JSON.parse(localStorage.getItem('cartRaceRedeemed')) || []; } catch(e) { return []; }
+}
+function saveRedeemedPrizes(arr) {
+  try { localStorage.setItem('cartRaceRedeemed', JSON.stringify(arr)); } catch(e) {}
+}
+let redeemedPrizes = loadRedeemedPrizes();
+
+// Boost colors per level
+const BOOST_COLORS = {
+  1: { glow: '#ffd54f', outer: '#ff8f00', inner: '#ffd54f', bolt: '#ff6f00' },
+  2: { glow: '#64b5f6', outer: '#1565c0', inner: '#90caf9', bolt: '#0d47a1' },
+  3: { glow: '#ef5350', outer: '#b71c1c', inner: '#ef9a9a', bolt: '#c62828' },
+  4: { glow: '#81c784', outer: '#2e7d32', inner: '#a5d6a7', bolt: '#1b5e20' },
+  5: { glow: '#ffab40', outer: '#e65100', inner: '#ffcc80', bolt: '#bf360c' },
+  6: { glow: '#80cbc4', outer: '#00695c', inner: '#b2dfdb', bolt: '#004d40' },
+};
+
+const CANVAS_W = 900, CANVAS_H = 600;
+const ROAD_Y = 260, ROAD_H = 260;
+const LANE_H = ROAD_H / 4;
+const CAR_W = 90, CAR_H = 40;
+const TRACK_LENGTH = 9000;
+const NUM_BOOSTS = 10;
+const BOOST_SPACING = TRACK_LENGTH / (NUM_BOOSTS + 1);
+
+const CAR_COLORS = {
+  pink:   { body: '#f48fb1', dark: '#ec407a', light: '#f8bbd0' },
+  purple: { body: '#ce93d8', dark: '#ab47bc', light: '#e1bee7' },
+  blue:   { body: '#64b5f6', dark: '#1e88e5', light: '#bbdefb' },
+  green:  { body: '#81c784', dark: '#43a047', light: '#c8e6c9' },
+};
+
+const AI_COLORS = ['#ef5350', '#ffa726', '#29b6f6'];
+
+// Driver definitions: skin tone, hat color, features
+const DRIVERS = [
+  { skin: '#FFCC99', hair: '#4e342e', hatColor: 'pink',   name: 'Driver 1' },
+  { skin: '#DEB887', hair: '#3e2723', hatColor: 'purple', name: 'Driver 2' },
+  { skin: '#8D5524', hair: '#1b1b1b', hatColor: 'blue',   name: 'Driver 3' },
+  { skin: '#F5D6BA', hair: '#bf360c', hatColor: 'green',  name: 'Driver 4' },
+];
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+let gameState = 'TITLE';
+let selectedCategory = 'science';
+let selectedColor = 'pink';
+let selectedDriver = 0;
+let selectedLevel = 1;
+
+let raceTime = 0;
+let cameraX = 0;
+let playerCar, aiCars;
+let boosts = [];
+let currentBoost = 0;
+let questionsAsked = 0;
+let correctAnswers = 0;
+let questionActive = false;
+let questionQueue = [];
+let raceFinished = false;
+let playerPlace = 1;
+let finishAnimTime = 0;
+let confettiParticles = [];
+let lastTime = 0;
+let animFrameId = null;
+
+// Special powers
+let powerDragon = false;     // car shape-shifted to dragon
+let powerInvisible = false;  // car is invisible (outline only)
+let dragonTimer = 0;
+let invisibleTimer = 0;
+const POWER_DURATION = 250;  // frames (~4 seconds)
+let currentBoostType = 'normal'; // 'normal', 'dragon', 'invisible'
+
+// Scenery arrays
+let clouds = [];
+let trees = [];
+let hills = [];
+
+// ============================================================
+//  UTILITY FUNCTIONS
+// ============================================================
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+
+function getPlaceSuffix(p) {
+  if (p === 1) return 'st';
+  if (p === 2) return 'nd';
+  if (p === 3) return 'rd';
+  return 'th';
+}
+
+// ============================================================
+//  QUESTION MANAGER
+// ============================================================
+function loadQuestions() {
+  let pool;
+  if (selectedCategory === 'mix') {
+    pool = [
+      ...QUESTIONS.science[selectedLevel],
+      ...QUESTIONS.history[selectedLevel],
+      ...QUESTIONS.math[selectedLevel],
+    ];
+  } else {
+    pool = [...QUESTIONS[selectedCategory][selectedLevel]];
+  }
+  // Shuffle and pick 10
+  const shuffled = shuffle(pool);
+  questionQueue = shuffled.slice(0, 10).map(q => {
+    // Shuffle answers but track the correct one
+    const indices = [0, 1, 2, 3];
+    const shuffledIndices = shuffle(indices);
+    const newCorrect = shuffledIndices.indexOf(q.correct);
+    return {
+      question: q.question,
+      choices: shuffledIndices.map(i => q.choices[i]),
+      correct: newCorrect
+    };
+  });
+}
+
+function showQuestion() {
+  if (questionsAsked >= 10) return;
+  const q = questionQueue[questionsAsked];
+  document.getElementById('qText').textContent = q.question;
+  const container = document.getElementById('answersContainer');
+  container.innerHTML = '';
+  document.getElementById('resultText').textContent = '';
+
+  // Set label based on boost type
+  const label = document.getElementById('boostLabel');
+  if (currentBoostType === 'dragon') {
+    label.textContent = 'Dragon Power!';
+    label.style.color = '#9c27b0';
+  } else if (currentBoostType === 'invisible') {
+    label.textContent = 'Invisible Power!';
+    label.style.color = '#9c27b0';
+  } else {
+    label.textContent = 'Boost Question!';
+    label.style.color = '#ff6f00';
+  }
+
+  q.choices.forEach((choice, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'answer-btn';
+    btn.textContent = choice;
+    btn.addEventListener('click', () => handleAnswer(i, q.correct));
+    container.appendChild(btn);
+  });
+
+  document.getElementById('questionOverlay').classList.add('active');
+  questionActive = true;
+}
+
+function handleAnswer(selected, correct) {
+  const btns = document.querySelectorAll('.answer-btn');
+  btns.forEach((btn, i) => {
+    btn.disabled = true;
+    if (i === correct) btn.classList.add('correct');
+    if (i === selected && i !== correct) btn.classList.add('wrong');
+  });
+
+  const isCorrect = selected === correct;
+  const resultEl = document.getElementById('resultText');
+
+  if (isCorrect) {
+    correctAnswers++;
+    if (currentBoostType === 'dragon') {
+      resultEl.style.color = '#7b1fa2';
+      resultEl.textContent = 'Dragon Form activated!';
+      powerDragon = true;
+      dragonTimer = POWER_DURATION;
+      document.getElementById('powerDragon').classList.add('active');
+      playerCar.speedBoost = 3.5;
+      playerCar.boostTimer = 120;
+    } else if (currentBoostType === 'invisible') {
+      resultEl.style.color = '#7b1fa2';
+      resultEl.textContent = 'Invisible Mode activated!';
+      powerInvisible = true;
+      invisibleTimer = POWER_DURATION;
+      document.getElementById('powerInvisible').classList.add('active');
+      playerCar.speedBoost = 3.5;
+      playerCar.boostTimer = 120;
+    } else {
+      resultEl.style.color = '#2e7d32';
+      resultEl.textContent = 'Correct! Speed Boost!';
+      playerCar.speedBoost = 3.5;
+      playerCar.boostTimer = 120;
+    }
+  } else {
+    resultEl.style.color = '#c62828';
+    resultEl.textContent = 'Not quite! Slowing down...';
+    playerCar.speedBoost = -1.5;
+    playerCar.boostTimer = 90;
+  }
+
+  currentBoostType = 'normal';
+  questionsAsked++;
+  updateHUD();
+
+  setTimeout(() => {
+    document.getElementById('questionOverlay').classList.remove('active');
+    questionActive = false;
+  }, 1400);
+}
+
+// ============================================================
+//  CAR DRAWING
+// ============================================================
+// driverIdx: index into DRIVERS array, -1 = no driver
+function drawCar(ctx, x, y, w, h, color, isPlayer, facingRight, driverIdx) {
+  const c = CAR_COLORS[color] || { body: color, dark: color, light: color };
+  const bodyColor = c.body || color;
+  const darkColor = c.dark || color;
+  const lightColor = c.light || color;
+  const isColorObj = !!c.body;
+  if (driverIdx === undefined) driverIdx = -1;
+
+  ctx.save();
+  ctx.translate(x, y);
+
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.beginPath();
+  ctx.ellipse(w / 2, h + 2, w / 2 - 4, 5, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Body
+  ctx.fillStyle = bodyColor;
+  ctx.beginPath();
+  ctx.roundRect(0, h * 0.3, w, h * 0.55, 8);
+  ctx.fill();
+
+  // Roof / cabin
+  ctx.fillStyle = isColorObj ? darkColor : bodyColor;
+  ctx.beginPath();
+  if (facingRight !== false) {
+    ctx.roundRect(w * 0.35, h * 0.05, w * 0.40, h * 0.35, [8, 8, 0, 0]);
+  } else {
+    ctx.roundRect(w * 0.25, h * 0.05, w * 0.40, h * 0.35, [8, 8, 0, 0]);
+  }
+  ctx.fill();
+
+  // Window
+  ctx.fillStyle = '#b3e5fc';
+  let winX, winY, winW, winH;
+  if (facingRight !== false) {
+    winX = w * 0.40; winY = h * 0.10; winW = w * 0.30; winH = h * 0.22;
+  } else {
+    winX = w * 0.30; winY = h * 0.10; winW = w * 0.30; winH = h * 0.22;
+  }
+  ctx.fillRect(winX, winY, winW, winH);
+
+  // Draw driver in window
+  if (driverIdx >= 0 && driverIdx < DRIVERS.length) {
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(winX, winY, winW, winH);
+    ctx.clip();
+    const headR = Math.min(winW, winH) * 0.45;
+    const headCX = winX + winW * 0.48;
+    const headCY = winY + winH * 0.65;
+    drawDriverHead(ctx, headCX, headCY, headR, driverIdx);
+    ctx.restore();
+  }
+
+  // Headlight
+  ctx.fillStyle = '#fff9c4';
+  if (facingRight !== false) {
+    ctx.beginPath();
+    ctx.arc(w - 3, h * 0.52, 4, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    ctx.beginPath();
+    ctx.arc(3, h * 0.52, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Taillight
+  ctx.fillStyle = '#ef5350';
+  if (facingRight !== false) {
+    ctx.beginPath();
+    ctx.arc(3, h * 0.52, 3, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    ctx.beginPath();
+    ctx.arc(w - 3, h * 0.52, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // Bumper line
+  ctx.strokeStyle = isColorObj ? darkColor : '#555';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(4, h * 0.83);
+  ctx.lineTo(w - 4, h * 0.83);
+  ctx.stroke();
+
+  // Wheels
+  const wheelR = h * 0.20;
+  const wheelY = h * 0.85;
+  [w * 0.22, w * 0.78].forEach(wx => {
+    ctx.fillStyle = '#37474f';
+    ctx.beginPath();
+    ctx.arc(wx, wheelY, wheelR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#78909c';
+    ctx.beginPath();
+    ctx.arc(wx, wheelY, wheelR * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+  });
+
+  // Player star indicator
+  if (isPlayer) {
+    ctx.fillStyle = '#ffd54f';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('★', w / 2, h * 0.02);
+  }
+
+  ctx.restore();
+}
+
+function drawCarPreview(cvs, color) {
+  const c = cvs.getContext('2d');
+  c.clearRect(0, 0, cvs.width, cvs.height);
+  drawCar(c, 5, 5, 70, 35, color, false, true, -1);
+}
+
+// ============================================================
+//  DRIVER DRAWING
+// ============================================================
+// Draw a driver head+hat. cx,cy = center of head, r = head radius
+function drawDriverHead(ctx, cx, cy, r, driverIdx, hatColorOverride) {
+  const drv = DRIVERS[driverIdx] || DRIVERS[0];
+  const hatKey = hatColorOverride || drv.hatColor;
+  const hatCol = CAR_COLORS[hatKey] || CAR_COLORS.pink;
+
+  ctx.save();
+
+  // Ears
+  ctx.fillStyle = drv.skin;
+  ctx.beginPath();
+  ctx.ellipse(cx - r * 0.9, cy + r * 0.05, r * 0.22, r * 0.3, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(cx + r * 0.9, cy + r * 0.05, r * 0.22, r * 0.3, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Head circle
+  ctx.fillStyle = drv.skin;
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Eyes
+  const eyeY = cy - r * 0.1;
+  const eyeSpread = r * 0.35;
+  const eyeR = r * 0.16;
+
+  // Eye whites
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.ellipse(cx - eyeSpread, eyeY, eyeR * 1.3, eyeR * 1.1, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(cx + eyeSpread, eyeY, eyeR * 1.3, eyeR * 1.1, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Pupils
+  ctx.fillStyle = '#1a1a1a';
+  ctx.beginPath();
+  ctx.arc(cx - eyeSpread + eyeR * 0.2, eyeY, eyeR * 0.7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(cx + eyeSpread + eyeR * 0.2, eyeY, eyeR * 0.7, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Eyebrows
+  ctx.strokeStyle = drv.hair;
+  ctx.lineWidth = Math.max(1, r * 0.12);
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(cx - eyeSpread - eyeR, eyeY - eyeR * 1.8);
+  ctx.lineTo(cx - eyeSpread + eyeR, eyeY - eyeR * 1.5);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(cx + eyeSpread - eyeR, eyeY - eyeR * 1.5);
+  ctx.lineTo(cx + eyeSpread + eyeR, eyeY - eyeR * 1.8);
+  ctx.stroke();
+
+  // Smile
+  ctx.strokeStyle = '#6d4c41';
+  ctx.lineWidth = Math.max(1, r * 0.1);
+  ctx.beginPath();
+  ctx.arc(cx, cy + r * 0.15, r * 0.35, 0.15, Math.PI - 0.15);
+  ctx.stroke();
+
+  // Nose
+  ctx.fillStyle = drv.skin;
+  ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+  ctx.lineWidth = Math.max(0.5, r * 0.06);
+  ctx.beginPath();
+  ctx.arc(cx, cy + r * 0.05, r * 0.12, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  // Hat — baseball cap style
+  // Hat dome
+  ctx.fillStyle = hatCol.body;
+  ctx.beginPath();
+  ctx.arc(cx, cy - r * 0.35, r * 0.95, Math.PI, 0);
+  ctx.fill();
+
+  // Hat band
+  ctx.fillStyle = hatCol.dark;
+  ctx.fillRect(cx - r * 0.95, cy - r * 0.38, r * 1.9, r * 0.18);
+
+  // Hat brim — extends to the right (facing right)
+  ctx.fillStyle = hatCol.dark;
+  ctx.beginPath();
+  ctx.ellipse(cx + r * 0.15, cy - r * 0.32, r * 1.15, r * 0.18, 0.1, -Math.PI * 0.1, Math.PI * 1.1);
+  ctx.fill();
+
+  // Hat button on top
+  ctx.fillStyle = hatCol.light;
+  ctx.beginPath();
+  ctx.arc(cx, cy - r * 1.2, r * 0.12, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawDriverPreview(cvs, driverIdx) {
+  const c = cvs.getContext('2d');
+  c.clearRect(0, 0, cvs.width, cvs.height);
+  drawDriverHead(c, 35, 40, 22, driverIdx);
+}
+
+// ============================================================
+//  SCENERY
+// ============================================================
+function generateScenery() {
+  clouds = [];
+  for (let i = 0; i < 30; i++) {
+    clouds.push({
+      x: Math.random() * (TRACK_LENGTH + CANVAS_W),
+      y: 20 + Math.random() * 120,
+      w: 60 + Math.random() * 80,
+      speed: 0.1 + Math.random() * 0.2
+    });
+  }
+  hills = [];
+  for (let i = 0; i < 20; i++) {
+    hills.push({
+      x: i * 500 + Math.random() * 200,
+      w: 200 + Math.random() * 200,
+      h: 40 + Math.random() * 60,
+      color: `hsl(${100 + Math.random() * 30}, ${50 + Math.random() * 20}%, ${40 + Math.random() * 15}%)`
+    });
+  }
+  trees = [];
+  for (let i = 0; i < 50; i++) {
+    trees.push({
+      x: 100 + Math.random() * (TRACK_LENGTH + 200),
+      side: Math.random() < 0.5 ? 'top' : 'bottom',
+      h: 25 + Math.random() * 30,
+      color: `hsl(${110 + Math.random() * 30}, ${55 + Math.random() * 20}%, ${30 + Math.random() * 15}%)`
+    });
+  }
+}
+
+function drawBackground(dt) {
+  // Sky
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, ROAD_Y);
+  skyGrad.addColorStop(0, '#4fc3f7');
+  skyGrad.addColorStop(1, '#81d4fa');
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, CANVAS_W, ROAD_Y);
+
+  // Hills
+  hills.forEach(h => {
+    const sx = h.x - cameraX * 0.4;
+    if (sx > -h.w && sx < CANVAS_W + h.w) {
+      ctx.fillStyle = h.color;
+      ctx.beginPath();
+      ctx.ellipse(sx, ROAD_Y, h.w / 2, h.h, 0, Math.PI, 0);
+      ctx.fill();
+    }
+  });
+
+  // Clouds
+  clouds.forEach(c => {
+    c.x -= c.speed * dt * 0.06;
+    let sx = c.x - cameraX * 0.15;
+    // Wrap clouds
+    if (sx < -c.w) {
+      c.x += TRACK_LENGTH + CANVAS_W + c.w * 2;
+    }
+    sx = c.x - cameraX * 0.15;
+    if (sx > -c.w && sx < CANVAS_W + c.w) {
+      ctx.fillStyle = 'rgba(255,255,255,0.85)';
+      ctx.beginPath();
+      ctx.ellipse(sx, c.y, c.w / 2, 18, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(sx - c.w * 0.2, c.y + 5, c.w * 0.3, 14, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(sx + c.w * 0.25, c.y + 3, c.w * 0.25, 12, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+
+  // Grass above road
+  ctx.fillStyle = '#66bb6a';
+  ctx.fillRect(0, ROAD_Y - 10, CANVAS_W, 10);
+
+  // Road
+  ctx.fillStyle = '#546e7a';
+  ctx.fillRect(0, ROAD_Y, CANVAS_W, ROAD_H);
+
+  // Road top/bottom edges
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, ROAD_Y, CANVAS_W, 3);
+  ctx.fillRect(0, ROAD_Y + ROAD_H - 3, CANVAS_W, 3);
+
+  // Lane dashes
+  for (let lane = 1; lane < 4; lane++) {
+    const ly = ROAD_Y + lane * LANE_H;
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([20, 20]);
+    ctx.lineDashOffset = -cameraX * 0.3;
+    ctx.beginPath();
+    ctx.moveTo(0, ly);
+    ctx.lineTo(CANVAS_W, ly);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // Grass below road
+  ctx.fillStyle = '#66bb6a';
+  ctx.fillRect(0, ROAD_Y + ROAD_H, CANVAS_W, CANVAS_H - ROAD_Y - ROAD_H);
+
+  // Trees
+  trees.forEach(t => {
+    const sx = t.x - cameraX * 0.7;
+    if (sx > -30 && sx < CANVAS_W + 30) {
+      const ty = t.side === 'top' ? ROAD_Y - 15 : ROAD_Y + ROAD_H + 5;
+      // Trunk
+      ctx.fillStyle = '#795548';
+      ctx.fillRect(sx - 3, ty - t.h * 0.4, 6, t.h * 0.4);
+      // Foliage
+      ctx.fillStyle = t.color;
+      ctx.beginPath();
+      ctx.arc(sx, ty - t.h * 0.5, t.h * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(sx - t.h * 0.2, ty - t.h * 0.35, t.h * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(sx + t.h * 0.2, ty - t.h * 0.35, t.h * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+
+  // Finish line
+  const finishX = TRACK_LENGTH - cameraX;
+  if (finishX > -40 && finishX < CANVAS_W + 40) {
+    const checkerSize = 12;
+    for (let row = 0; row < Math.ceil(ROAD_H / checkerSize); row++) {
+      for (let col = 0; col < 3; col++) {
+        ctx.fillStyle = (row + col) % 2 === 0 ? '#fff' : '#222';
+        ctx.fillRect(
+          finishX + col * checkerSize,
+          ROAD_Y + row * checkerSize,
+          checkerSize,
+          checkerSize
+        );
+      }
+    }
+  }
+}
+
+// ============================================================
+//  BOOST ICON DRAWING
+// ============================================================
+function drawBoostIcon(x, y, time) {
+  const bc = BOOST_COLORS[selectedLevel] || BOOST_COLORS[1];
+  const pulse = Math.sin(time * 0.005) * 3;
+  const r = 16 + pulse;
+
+  // Glow
+  ctx.save();
+  ctx.shadowColor = bc.glow;
+  ctx.shadowBlur = 15 + pulse;
+  ctx.fillStyle = bc.outer;
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Inner
+  ctx.fillStyle = bc.inner;
+  ctx.beginPath();
+  ctx.arc(x, y, r * 0.65, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Lightning bolt
+  ctx.fillStyle = bc.bolt;
+  ctx.beginPath();
+  ctx.moveTo(x - 4, y - 8);
+  ctx.lineTo(x + 2, y - 1);
+  ctx.lineTo(x - 1, y + 0);
+  ctx.lineTo(x + 5, y + 9);
+  ctx.lineTo(x - 2, y + 1);
+  ctx.lineTo(x + 1, y + 0);
+  ctx.closePath();
+  ctx.fill();
+}
+
+// ============================================================
+//  RACE SETUP & LOGIC
+// ============================================================
+function initRace() {
+  raceTime = 0;
+  cameraX = 0;
+  questionsAsked = 0;
+  correctAnswers = 0;
+  currentBoost = 0;
+  questionActive = false;
+  raceFinished = false;
+  playerPlace = 1;
+
+  playerCar = {
+    x: 50,
+    lane: 0,
+    baseSpeed: 2.2,
+    speed: 2.2,
+    speedBoost: 0,
+    boostTimer: 0,
+    isPlayer: true,
+    color: selectedColor,
+    driverIdx: selectedDriver
+  };
+
+  // Assign AI drivers — pick from drivers the player didn't choose
+  const aiDriverPool = [0, 1, 2, 3].filter(d => d !== selectedDriver);
+  aiCars = [];
+  const aiSpeeds = [1.9, 2.1, 2.0];
+  for (let i = 0; i < 3; i++) {
+    aiCars.push({
+      x: 50 + Math.random() * 20 - 10,
+      lane: i + 1,
+      baseSpeed: aiSpeeds[i],
+      speed: aiSpeeds[i],
+      speedBoost: 0,
+      boostTimer: 0,
+      isPlayer: false,
+      color: AI_COLORS[i],
+      driverIdx: aiDriverPool[i],
+      wobbleTimer: Math.random() * 1000,
+      burstCooldown: 0
+    });
+  }
+
+  boosts = [];
+  for (let i = 0; i < NUM_BOOSTS; i++) {
+    boosts.push({
+      x: BOOST_SPACING * (i + 1),
+      collected: false,
+      type: 'normal'   // 'normal', 'dragon', or 'invisible'
+    });
+  }
+
+  // For level 2+, make boost #3 a dragon power and #7 an invisible power
+  if (selectedLevel >= 2) {
+    boosts[2].type = 'dragon';
+    boosts[6].type = 'invisible';
+  }
+
+  // Reset special powers
+  powerDragon = false;
+  powerInvisible = false;
+  dragonTimer = 0;
+  invisibleTimer = 0;
+  currentBoostType = 'normal';
+
+  generateScenery();
+  loadQuestions();
+
+  document.getElementById('progressBarContainer').style.display = 'block';
+  document.getElementById('questionCounter').style.display = 'block';
+  document.getElementById('placeIndicator').style.display = 'block';
+  // Show power icons for level 2+
+  const powerIconsEl = document.getElementById('powerIcons');
+  powerIconsEl.style.display = selectedLevel >= 2 ? 'flex' : 'none';
+  document.getElementById('powerDragon').classList.remove('active');
+  document.getElementById('powerInvisible').classList.remove('active');
+  drawPowerIcons();
+  updateHUD();
+}
+
+function updateHUD() {
+  const progress = clamp(playerCar.x / TRACK_LENGTH * 100, 0, 100);
+  document.getElementById('progressBarFill').style.width = progress + '%';
+  document.getElementById('progressLabel').textContent = Math.round(progress) + '%';
+  document.getElementById('questionCounter').textContent = `Score: ${correctAnswers}/${questionsAsked}`;
+
+  const place = getPlayerPlace();
+  document.getElementById('placeIndicator').textContent = `${place}${getPlaceSuffix(place)} Place`;
+}
+
+function getPlayerPlace() {
+  let place = 1;
+  const allCars = [playerCar, ...aiCars];
+  allCars.forEach(c => {
+    if (c !== playerCar && c.x > playerCar.x) place++;
+  });
+  return place;
+}
+
+function updateRace(dt) {
+  if (questionActive || raceFinished) return;
+
+  raceTime += dt;
+
+  // Update player car
+  if (playerCar.boostTimer > 0) {
+    playerCar.boostTimer -= 1;
+    playerCar.speed = playerCar.baseSpeed + playerCar.speedBoost;
+    if (playerCar.boostTimer <= 0) {
+      playerCar.speed = playerCar.baseSpeed;
+      playerCar.speedBoost = 0;
+    }
+  }
+  playerCar.x += playerCar.speed * (dt / 16);
+
+  // Update AI cars
+  aiCars.forEach((ai, i) => {
+    ai.wobbleTimer += dt;
+    ai.burstCooldown -= dt;
+
+    // AI speed variation
+    const wobble = Math.sin(ai.wobbleTimer * 0.002) * 0.3;
+    let aiSpeed = ai.baseSpeed + wobble;
+
+    // Random bursts to keep race exciting
+    if (ai.burstCooldown <= 0 && Math.random() < 0.003) {
+      ai.speedBoost = 1.2 + Math.random() * 0.8;
+      ai.boostTimer = 60 + Math.random() * 60;
+      ai.burstCooldown = 2000 + Math.random() * 3000;
+    }
+
+    if (ai.boostTimer > 0) {
+      ai.boostTimer -= 1;
+      aiSpeed += ai.speedBoost;
+      if (ai.boostTimer <= 0) ai.speedBoost = 0;
+    }
+
+    // Rubber-banding: AI slows if too far ahead, speeds up if too far behind
+    const diff = ai.x - playerCar.x;
+    if (diff > 400) aiSpeed *= 0.85;
+    else if (diff < -400) aiSpeed *= 1.15;
+
+    // Must answer 7+ correctly to win: lead AI stays ahead if player
+    // hasn't answered enough questions correctly
+    const progress = playerCar.x / TRACK_LENGTH;
+    if (progress > 0.3 && correctAnswers < 7) {
+      const urgency = Math.min((progress - 0.3) / 0.4, 1);   // ramps 0→1
+      const deficit = (7 - correctAnswers) / 7;               // how far short
+      if (i === 0) {
+        aiSpeed += 3.0 * urgency * deficit;                   // lead AI surges
+        // If lead AI falls behind player, give extra catch-up
+        if (ai.x < playerCar.x) aiSpeed += 2.0 * urgency;
+      } else {
+        aiSpeed += 1.0 * urgency * deficit;
+      }
+    }
+
+    ai.speed = aiSpeed;
+    ai.x += ai.speed * (dt / 16);
+  });
+
+  // Camera follows player
+  cameraX = playerCar.x - 200;
+  if (cameraX < 0) cameraX = 0;
+
+  // Check boost collision
+  if (currentBoost < NUM_BOOSTS) {
+    const boost = boosts[currentBoost];
+    if (!boost.collected && playerCar.x >= boost.x - 40) {
+      boost.collected = true;
+      currentBoostType = boost.type;
+      currentBoost++;
+      showQuestion();
+    }
+  }
+
+  // Update special power timers
+  if (dragonTimer > 0) {
+    dragonTimer--;
+    if (dragonTimer <= 0) {
+      powerDragon = false;
+      document.getElementById('powerDragon').classList.remove('active');
+    }
+  }
+  if (invisibleTimer > 0) {
+    invisibleTimer--;
+    if (invisibleTimer <= 0) {
+      powerInvisible = false;
+      document.getElementById('powerInvisible').classList.remove('active');
+    }
+  }
+
+  // Check finish
+  if (!raceFinished) {
+    const allCarsArr = [playerCar, ...aiCars];
+    const anyFinished = allCarsArr.some(c => c.x >= TRACK_LENGTH);
+    if (anyFinished) {
+      const allDone = allCarsArr.every(c => c.x >= TRACK_LENGTH - 100) || playerCar.x >= TRACK_LENGTH;
+      if (allDone || playerCar.x >= TRACK_LENGTH) {
+        // If player hasn't answered 7+ correctly, ensure lead AI finishes ahead
+        if (correctAnswers < 7) {
+          const leadAI = aiCars[0];
+          if (leadAI.x <= playerCar.x) {
+            leadAI.x = playerCar.x + 30;
+          }
+        }
+        raceFinished = true;
+        playerPlace = getPlayerPlace();
+        setTimeout(() => showFinish(), 600);
+      }
+    }
+  }
+
+  updateHUD();
+}
+
+function drawRace() {
+  drawBackground(16);
+
+  // Draw boosts
+  boosts.forEach((b, i) => {
+    if (!b.collected) {
+      const sx = b.x - cameraX;
+      if (sx > -30 && sx < CANVAS_W + 30) {
+        const by = ROAD_Y + playerCar.lane * LANE_H + LANE_H / 2;
+        if (b.type === 'dragon' || b.type === 'invisible') {
+          drawSpecialBoostIcon(sx, by, raceTime, b.type);
+        } else {
+          drawBoostIcon(sx, by, raceTime);
+        }
+      }
+    }
+  });
+
+  // Draw all cars sorted by lane for layering
+  const allCars = [playerCar, ...aiCars];
+  allCars.sort((a, b) => a.lane - b.lane);
+  allCars.forEach(car => {
+    const sx = car.x - cameraX;
+    const sy = ROAD_Y + car.lane * LANE_H + (LANE_H - CAR_H) / 2;
+    if (sx > -CAR_W - 10 && sx < CANVAS_W + 10) {
+      // Boost trail effect
+      if (car.boostTimer > 0 && car.speedBoost > 0) {
+        ctx.save();
+        ctx.globalAlpha = 0.4;
+        for (let i = 1; i <= 5; i++) {
+          ctx.globalAlpha = 0.3 - i * 0.05;
+          ctx.fillStyle = powerDragon && car.isPlayer ? '#ce93d8' : '#ffd54f';
+          ctx.beginPath();
+          ctx.ellipse(sx - i * 12, sy + CAR_H / 2, 8, 5 + i, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+      // Slow trail effect
+      if (car.boostTimer > 0 && car.speedBoost < 0) {
+        ctx.save();
+        for (let i = 1; i <= 3; i++) {
+          ctx.globalAlpha = 0.2;
+          ctx.fillStyle = '#ef5350';
+          ctx.beginPath();
+          ctx.ellipse(sx + CAR_W + i * 8, sy + CAR_H / 2, 6, 4, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // Choose how to draw the player car based on active powers
+      if (car.isPlayer && powerDragon) {
+        drawRaceDragon(ctx, sx, sy, CAR_W, CAR_H, raceTime);
+      } else if (car.isPlayer && powerInvisible) {
+        drawInvisibleCar(ctx, sx, sy, CAR_W, CAR_H, car.color, car.driverIdx);
+      } else {
+        drawCar(ctx, sx, sy, CAR_W, CAR_H, car.color, car.isPlayer, true, car.driverIdx);
+      }
+    }
+  });
+}
+
+// ============================================================
+//  SPECIAL BOOST ICON (purple)
+// ============================================================
+function drawSpecialBoostIcon(x, y, time, type) {
+  const pulse = Math.sin(time * 0.005) * 3;
+  const r = 18 + pulse;
+
+  // Purple glow
+  ctx.save();
+  ctx.shadowColor = '#ce93d8';
+  ctx.shadowBlur = 18 + pulse;
+  ctx.fillStyle = '#7b1fa2';
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Inner ring
+  ctx.fillStyle = '#ce93d8';
+  ctx.beginPath();
+  ctx.arc(x, y, r * 0.65, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Icon in center
+  ctx.fillStyle = '#4a148c';
+  if (type === 'dragon') {
+    // Small dragon silhouette — wings + body
+    ctx.beginPath();
+    ctx.moveTo(x, y - 6);
+    ctx.lineTo(x - 7, y - 3);
+    ctx.lineTo(x - 4, y + 1);
+    ctx.lineTo(x - 2, y + 5);
+    ctx.lineTo(x + 2, y + 5);
+    ctx.lineTo(x + 4, y + 1);
+    ctx.lineTo(x + 7, y - 3);
+    ctx.closePath();
+    ctx.fill();
+    // Small horns
+    ctx.beginPath();
+    ctx.moveTo(x - 2, y - 6);
+    ctx.lineTo(x - 3, y - 9);
+    ctx.lineTo(x, y - 6);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(x + 2, y - 6);
+    ctx.lineTo(x + 3, y - 9);
+    ctx.lineTo(x, y - 6);
+    ctx.fill();
+  } else {
+    // Ghost / invisible icon — dashed circle with question mark
+    ctx.strokeStyle = '#4a148c';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.arc(x, y, 6, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // Eye dots
+    ctx.fillStyle = '#4a148c';
+    ctx.beginPath();
+    ctx.arc(x - 2, y - 1, 1.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(x + 2, y - 1, 1.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+}
+
+// ============================================================
+//  RACE DRAGON (car shape-shifted into dragon)
+// ============================================================
+function drawRaceDragon(ctx, x, y, w, h, time) {
+  ctx.save();
+  const cx = x + w / 2;
+  const cy = y + h / 2;
+
+  const wingFlap = Math.sin(time * 0.008) * 8;
+
+  // Purple trail
+  ctx.globalAlpha = 0.25;
+  for (let i = 1; i <= 4; i++) {
+    ctx.fillStyle = '#ce93d8';
+    ctx.beginPath();
+    ctx.ellipse(cx - w * 0.35 - i * 10, cy, 6, 4 + i, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // Wings
+  ctx.fillStyle = '#7b1fa2';
+  ctx.beginPath();
+  ctx.moveTo(cx - 5, cy - 6);
+  ctx.lineTo(cx - 15, cy - 22 + wingFlap);
+  ctx.lineTo(cx + 5, cy - 8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(cx - 5, cy + 6);
+  ctx.lineTo(cx - 15, cy + 22 - wingFlap);
+  ctx.lineTo(cx + 5, cy + 8);
+  ctx.closePath();
+  ctx.fill();
+
+  // Body
+  ctx.fillStyle = '#8e24aa';
+  ctx.beginPath();
+  ctx.ellipse(cx, cy, w * 0.35, h * 0.35, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Belly
+  ctx.fillStyle = '#ce93d8';
+  ctx.beginPath();
+  ctx.ellipse(cx + 3, cy, w * 0.18, h * 0.22, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Head
+  ctx.fillStyle = '#7b1fa2';
+  ctx.beginPath();
+  ctx.ellipse(cx + w * 0.32, cy, h * 0.30, h * 0.28, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Eyes
+  ctx.fillStyle = '#fff176';
+  ctx.beginPath();
+  ctx.ellipse(cx + w * 0.36, cy - 4, 3, 3.5, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#b71c1c';
+  ctx.beginPath();
+  ctx.ellipse(cx + w * 0.36, cy - 4, 1.2, 3, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Horns
+  ctx.fillStyle = '#ffd54f';
+  ctx.beginPath();
+  ctx.moveTo(cx + w * 0.30, cy - 9);
+  ctx.lineTo(cx + w * 0.28, cy - 16);
+  ctx.lineTo(cx + w * 0.34, cy - 8);
+  ctx.closePath();
+  ctx.fill();
+
+  // Flame
+  const fl = 8 + Math.sin(time * 0.015) * 5;
+  ctx.fillStyle = '#ff6f00';
+  ctx.beginPath();
+  ctx.moveTo(cx + w * 0.42, cy - 1);
+  ctx.lineTo(cx + w * 0.42 + fl, cy - 3);
+  ctx.lineTo(cx + w * 0.42, cy + 1);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#ffd54f';
+  ctx.beginPath();
+  ctx.moveTo(cx + w * 0.42, cy);
+  ctx.lineTo(cx + w * 0.42 + fl * 0.5, cy - 1);
+  ctx.lineTo(cx + w * 0.42, cy + 0.5);
+  ctx.closePath();
+  ctx.fill();
+
+  // Tail
+  ctx.strokeStyle = '#8e24aa';
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(cx - w * 0.35, cy);
+  ctx.quadraticCurveTo(cx - w * 0.45, cy + 6, cx - w * 0.48, cy + 2);
+  ctx.stroke();
+
+  // Tail spike
+  ctx.fillStyle = '#ff6f00';
+  ctx.beginPath();
+  ctx.moveTo(cx - w * 0.48, cy + 2);
+  ctx.lineTo(cx - w * 0.53, cy - 2);
+  ctx.lineTo(cx - w * 0.46, cy + 1);
+  ctx.closePath();
+  ctx.fill();
+
+  // Player star
+  ctx.fillStyle = '#ffd54f';
+  ctx.font = 'bold 12px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('★', cx, cy - h * 0.5);
+
+  ctx.restore();
+}
+
+// ============================================================
+//  INVISIBLE CAR (outline only)
+// ============================================================
+function drawInvisibleCar(ctx, x, y, w, h, color, driverIdx) {
+  const c = CAR_COLORS[color] || { body: color, dark: color };
+  const outlineColor = c.dark || color;
+
+  ctx.save();
+  ctx.translate(x, y);
+
+  // Ghostly shimmer
+  const shimmer = 0.15 + Math.sin(raceTime * 0.008) * 0.08;
+  ctx.globalAlpha = shimmer;
+  ctx.fillStyle = c.body || color;
+  ctx.beginPath();
+  ctx.roundRect(0, h * 0.3, w, h * 0.55, 8);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Body outline
+  ctx.strokeStyle = outlineColor;
+  ctx.lineWidth = 2;
+  ctx.setLineDash([5, 4]);
+  ctx.beginPath();
+  ctx.roundRect(0, h * 0.3, w, h * 0.55, 8);
+  ctx.stroke();
+
+  // Cabin outline
+  ctx.beginPath();
+  ctx.roundRect(w * 0.35, h * 0.05, w * 0.40, h * 0.35, [8, 8, 0, 0]);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Wheel outlines
+  const wheelR = h * 0.20;
+  const wheelY = h * 0.85;
+  ctx.strokeStyle = outlineColor;
+  ctx.lineWidth = 1.5;
+  [w * 0.22, w * 0.78].forEach(wx => {
+    ctx.beginPath();
+    ctx.arc(wx, wheelY, wheelR, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+
+  // Ghost driver silhouette
+  if (driverIdx >= 0) {
+    const drv = DRIVERS[driverIdx] || DRIVERS[0];
+    const headR = Math.min(w * 0.30, h * 0.22) * 0.45;
+    const headCX = w * 0.40 + w * 0.30 * 0.48;
+    const headCY = h * 0.10 + h * 0.22 * 0.65;
+    ctx.globalAlpha = 0.3;
+    ctx.strokeStyle = outlineColor;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    ctx.arc(headCX, headCY, headR, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 1;
+  }
+
+  // Player star
+  ctx.fillStyle = '#ffd54f';
+  ctx.globalAlpha = 0.6;
+  ctx.font = 'bold 14px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('★', w / 2, h * 0.02);
+
+  ctx.restore();
+}
+
+// ============================================================
+//  POWER ICON DRAWING (HUD mini icons)
+// ============================================================
+function drawPowerIcons() {
+  // Dragon icon
+  const dc = document.getElementById('powerDragonCanvas');
+  const dctx = dc.getContext('2d');
+  dctx.clearRect(0, 0, 30, 30);
+  dctx.fillStyle = '#ce93d8';
+  // Mini dragon silhouette
+  dctx.beginPath();
+  dctx.moveTo(15, 6);
+  dctx.lineTo(6, 11);
+  dctx.lineTo(9, 17);
+  dctx.lineTo(12, 24);
+  dctx.lineTo(18, 24);
+  dctx.lineTo(21, 17);
+  dctx.lineTo(24, 11);
+  dctx.closePath();
+  dctx.fill();
+  // Horns
+  dctx.fillStyle = '#ffd54f';
+  dctx.beginPath();
+  dctx.moveTo(12, 6);
+  dctx.lineTo(11, 2);
+  dctx.lineTo(14, 6);
+  dctx.fill();
+  dctx.beginPath();
+  dctx.moveTo(18, 6);
+  dctx.lineTo(19, 2);
+  dctx.lineTo(16, 6);
+  dctx.fill();
+  // Eyes
+  dctx.fillStyle = '#ff1744';
+  dctx.beginPath();
+  dctx.arc(13, 10, 1.5, 0, Math.PI * 2);
+  dctx.fill();
+  dctx.beginPath();
+  dctx.arc(17, 10, 1.5, 0, Math.PI * 2);
+  dctx.fill();
+
+  // Invisible icon
+  const ic = document.getElementById('powerInvisibleCanvas');
+  const ictx = ic.getContext('2d');
+  ictx.clearRect(0, 0, 30, 30);
+  ictx.strokeStyle = '#ce93d8';
+  ictx.lineWidth = 2;
+  ictx.setLineDash([3, 3]);
+  // Dashed car outline
+  ictx.beginPath();
+  ictx.roundRect(4, 10, 22, 12, 4);
+  ictx.stroke();
+  // Cabin
+  ictx.beginPath();
+  ictx.roundRect(10, 4, 12, 8, [3, 3, 0, 0]);
+  ictx.stroke();
+  ictx.setLineDash([]);
+  // Ghost eyes
+  ictx.fillStyle = '#ce93d8';
+  ictx.beginPath();
+  ictx.arc(13, 8, 1.5, 0, Math.PI * 2);
+  ictx.fill();
+  ictx.beginPath();
+  ictx.arc(18, 8, 1.5, 0, Math.PI * 2);
+  ictx.fill();
+}
+
+// ============================================================
+//  DRAGON DRAWING (big & scary)
+// ============================================================
+function drawDragon(ctx, x, y, scale, time) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+
+  const wingFlap = Math.sin(time * 0.005) * 20;
+  const breathe = Math.sin(time * 0.003) * 2;
+
+  // Tail — long spiked tail curving behind
+  ctx.strokeStyle = '#6a1b9a';
+  ctx.lineWidth = 10;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(0, 50);
+  ctx.quadraticCurveTo(45, 75, 55, 95);
+  ctx.quadraticCurveTo(65, 110, 50, 120);
+  ctx.stroke();
+
+  // Tail spikes
+  ctx.fillStyle = '#ff6f00';
+  const tailSpikes = [{x:30,y:70},{x:45,y:85},{x:55,y:100}];
+  tailSpikes.forEach(s => {
+    ctx.beginPath();
+    ctx.moveTo(s.x - 3, s.y);
+    ctx.lineTo(s.x + 6, s.y - 12);
+    ctx.lineTo(s.x + 4, s.y + 2);
+    ctx.closePath();
+    ctx.fill();
+  });
+
+  // Tail blade tip
+  ctx.fillStyle = '#d50000';
+  ctx.beginPath();
+  ctx.moveTo(50, 120);
+  ctx.lineTo(60, 108);
+  ctx.lineTo(42, 115);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(50, 120);
+  ctx.lineTo(62, 125);
+  ctx.lineTo(44, 122);
+  ctx.closePath();
+  ctx.fill();
+
+  // Left wing — big, bat-like
+  ctx.fillStyle = '#6a1b9a';
+  ctx.beginPath();
+  ctx.moveTo(-25, -15);
+  ctx.lineTo(-90, -70 + wingFlap);
+  ctx.lineTo(-100, -40 + wingFlap * 0.6);
+  ctx.lineTo(-75, -10 + wingFlap * 0.3);
+  ctx.lineTo(-50, 5);
+  ctx.closePath();
+  ctx.fill();
+
+  // Left wing membrane
+  ctx.fillStyle = '#8e24aa';
+  ctx.globalAlpha = 0.7;
+  ctx.beginPath();
+  ctx.moveTo(-25, 0);
+  ctx.lineTo(-85, -55 + wingFlap);
+  ctx.lineTo(-70, -20 + wingFlap * 0.4);
+  ctx.lineTo(-40, 5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Wing claw
+  ctx.fillStyle = '#ffd54f';
+  ctx.beginPath();
+  ctx.moveTo(-90, -70 + wingFlap);
+  ctx.lineTo(-95, -78 + wingFlap);
+  ctx.lineTo(-86, -68 + wingFlap);
+  ctx.closePath();
+  ctx.fill();
+
+  // Right wing
+  ctx.fillStyle = '#6a1b9a';
+  ctx.beginPath();
+  ctx.moveTo(25, -15);
+  ctx.lineTo(90, -70 + wingFlap);
+  ctx.lineTo(100, -40 + wingFlap * 0.6);
+  ctx.lineTo(75, -10 + wingFlap * 0.3);
+  ctx.lineTo(50, 5);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = '#8e24aa';
+  ctx.globalAlpha = 0.7;
+  ctx.beginPath();
+  ctx.moveTo(25, 0);
+  ctx.lineTo(85, -55 + wingFlap);
+  ctx.lineTo(70, -20 + wingFlap * 0.4);
+  ctx.lineTo(40, 5);
+  ctx.closePath();
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  ctx.fillStyle = '#ffd54f';
+  ctx.beginPath();
+  ctx.moveTo(90, -70 + wingFlap);
+  ctx.lineTo(95, -78 + wingFlap);
+  ctx.lineTo(86, -68 + wingFlap);
+  ctx.closePath();
+  ctx.fill();
+
+  // Body — large muscular torso
+  ctx.fillStyle = '#7b1fa2';
+  ctx.beginPath();
+  ctx.ellipse(0, 15 + breathe, 35, 45, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Belly scales
+  ctx.fillStyle = '#ce93d8';
+  ctx.beginPath();
+  ctx.ellipse(0, 25 + breathe, 22, 30, 0, 0, Math.PI * 2);
+  ctx.fill();
+  // Scale lines on belly
+  ctx.strokeStyle = '#ba68c8';
+  ctx.lineWidth = 1;
+  for (let i = 0; i < 4; i++) {
+    ctx.beginPath();
+    ctx.moveTo(-15 + i * 2, 10 + i * 10 + breathe);
+    ctx.lineTo(15 - i * 2, 10 + i * 10 + breathe);
+    ctx.stroke();
+  }
+
+  // Back spikes
+  ctx.fillStyle = '#ff6f00';
+  const spikes = [{x:0,y:-40},{x:0,y:-28},{x:0,y:-16},{x:0,y:-4},{x:0,y:8}];
+  spikes.forEach((s, i) => {
+    const sH = 14 - i * 1.5;
+    ctx.beginPath();
+    ctx.moveTo(s.x - 4, s.y);
+    ctx.lineTo(s.x, s.y - sH);
+    ctx.lineTo(s.x + 4, s.y);
+    ctx.closePath();
+    ctx.fill();
+  });
+
+  // Neck
+  ctx.fillStyle = '#7b1fa2';
+  ctx.beginPath();
+  ctx.moveTo(-18, -30);
+  ctx.quadraticCurveTo(-5, -50, 0, -55);
+  ctx.quadraticCurveTo(5, -50, 18, -30);
+  ctx.fill();
+
+  // Head — big angular head
+  ctx.fillStyle = '#6a1b9a';
+  ctx.beginPath();
+  ctx.ellipse(0, -60, 26, 22, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Snout — elongated
+  ctx.fillStyle = '#5c1690';
+  ctx.beginPath();
+  ctx.ellipse(0, -46, 18, 12, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Jaw / open mouth
+  ctx.fillStyle = '#4a0e6b';
+  ctx.beginPath();
+  ctx.ellipse(0, -40, 15, 7, 0, 0, Math.PI);
+  ctx.fill();
+
+  // Teeth — sharp triangles along jaw
+  ctx.fillStyle = '#fff';
+  const teeth = [-10, -6, -2, 2, 6, 10];
+  teeth.forEach(tx => {
+    ctx.beginPath();
+    ctx.moveTo(tx - 2, -40);
+    ctx.lineTo(tx, -34);
+    ctx.lineTo(tx + 2, -40);
+    ctx.closePath();
+    ctx.fill();
+  });
+
+  // Upper fangs
+  ctx.beginPath();
+  ctx.moveTo(-8, -42);
+  ctx.lineTo(-7, -33);
+  ctx.lineTo(-5, -42);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(5, -42);
+  ctx.lineTo(7, -33);
+  ctx.lineTo(8, -42);
+  ctx.closePath();
+  ctx.fill();
+
+  // Eyes — glowing, slitted
+  const eyeGlow = 0.6 + Math.sin(time * 0.008) * 0.3;
+  ctx.save();
+  ctx.shadowColor = '#ff1744';
+  ctx.shadowBlur = 10 * eyeGlow;
+
+  // Eye whites (yellowish)
+  ctx.fillStyle = '#fff176';
+  ctx.beginPath();
+  ctx.ellipse(-10, -65, 8, 9, -0.15, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(10, -65, 8, 9, 0.15, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  // Slitted pupils
+  ctx.fillStyle = '#b71c1c';
+  ctx.beginPath();
+  ctx.ellipse(-10, -65, 3, 7, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(10, -65, 3, 7, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Brow ridges
+  ctx.strokeStyle = '#4a0e6b';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(-20, -70);
+  ctx.quadraticCurveTo(-10, -78, -3, -72);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(20, -70);
+  ctx.quadraticCurveTo(10, -78, 3, -72);
+  ctx.stroke();
+
+  // Nostrils — smoke puffs
+  ctx.fillStyle = '#4a0e6b';
+  ctx.beginPath();
+  ctx.ellipse(-6, -47, 3, 2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(6, -47, 3, 2, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Nostril smoke
+  const smokeAlpha = (Math.sin(time * 0.004) + 1) * 0.15;
+  ctx.fillStyle = `rgba(150,150,150,${smokeAlpha})`;
+  ctx.beginPath();
+  ctx.ellipse(-8, -52, 5, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(8, -53, 4, 3, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Horns — large curved horns
+  ctx.fillStyle = '#4e342e';
+  ctx.beginPath();
+  ctx.moveTo(-14, -75);
+  ctx.quadraticCurveTo(-25, -95, -20, -105);
+  ctx.lineTo(-16, -100);
+  ctx.quadraticCurveTo(-20, -88, -10, -74);
+  ctx.closePath();
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(14, -75);
+  ctx.quadraticCurveTo(25, -95, 20, -105);
+  ctx.lineTo(16, -100);
+  ctx.quadraticCurveTo(20, -88, 10, -74);
+  ctx.closePath();
+  ctx.fill();
+
+  // Horn tips glow
+  ctx.fillStyle = '#ff6f00';
+  ctx.beginPath();
+  ctx.arc(-20, -105, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(20, -105, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Legs — thick muscular
+  ctx.fillStyle = '#6a1b9a';
+  ctx.fillRect(-22, 48, 14, 22);
+  ctx.fillRect(8, 48, 14, 22);
+
+  // Clawed feet
+  ctx.fillStyle = '#4e342e';
+  const clawFeet = [[-22, 70], [8, 70]];
+  clawFeet.forEach(([fx, fy]) => {
+    // 3 claws per foot
+    for (let c = 0; c < 3; c++) {
+      ctx.beginPath();
+      ctx.moveTo(fx + 2 + c * 5, fy);
+      ctx.lineTo(fx + c * 5, fy + 8);
+      ctx.lineTo(fx + 4 + c * 5, fy);
+      ctx.closePath();
+      ctx.fill();
+    }
+  });
+
+  // FIRE BREATH — constant, big
+  const flameTime = time * 0.012;
+  const flameLen = 30 + Math.sin(flameTime) * 15 + Math.sin(flameTime * 2.3) * 8;
+  const flameW = 10 + Math.sin(flameTime * 1.5) * 4;
+
+  // Outer flame (red-orange)
+  ctx.fillStyle = '#ff3d00';
+  ctx.beginPath();
+  ctx.moveTo(18, -45);
+  ctx.quadraticCurveTo(30 + flameLen * 0.5, -55 - flameW, 25 + flameLen, -48);
+  ctx.quadraticCurveTo(30 + flameLen * 0.5, -38 + flameW, 18, -42);
+  ctx.closePath();
+  ctx.fill();
+
+  // Mid flame (orange)
+  ctx.fillStyle = '#ff6f00';
+  ctx.beginPath();
+  ctx.moveTo(18, -44);
+  ctx.quadraticCurveTo(25 + flameLen * 0.4, -52 - flameW * 0.5, 20 + flameLen * 0.75, -46);
+  ctx.quadraticCurveTo(25 + flameLen * 0.4, -40 + flameW * 0.5, 18, -43);
+  ctx.closePath();
+  ctx.fill();
+
+  // Inner flame (yellow-white)
+  ctx.fillStyle = '#ffd54f';
+  ctx.beginPath();
+  ctx.moveTo(18, -44);
+  ctx.quadraticCurveTo(22 + flameLen * 0.2, -48, 18 + flameLen * 0.4, -45);
+  ctx.quadraticCurveTo(22 + flameLen * 0.2, -42, 18, -43);
+  ctx.closePath();
+  ctx.fill();
+
+  // Ember particles
+  ctx.fillStyle = '#ffab00';
+  for (let i = 0; i < 5; i++) {
+    const ex = 25 + Math.sin(flameTime + i * 2) * 20 + flameLen * 0.3;
+    const ey = -46 + Math.cos(flameTime * 1.5 + i * 3) * 12;
+    const er = 1.5 + Math.random() * 1.5;
+    ctx.beginPath();
+    ctx.arc(ex, ey, er, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+// ============================================================
+//  CONFETTI
+// ============================================================
+function spawnConfetti() {
+  confettiParticles = [];
+  const colors = ['#ff6f00', '#ffd54f', '#e91e63', '#4caf50', '#2196f3', '#9c27b0', '#ff5722'];
+  for (let i = 0; i < 120; i++) {
+    confettiParticles.push({
+      x: Math.random() * CANVAS_W,
+      y: -10 - Math.random() * 300,
+      vx: (Math.random() - 0.5) * 3,
+      vy: 1 + Math.random() * 3,
+      size: 4 + Math.random() * 6,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      rot: Math.random() * Math.PI * 2,
+      rotSpeed: (Math.random() - 0.5) * 0.1
+    });
+  }
+}
+
+function updateConfetti(dt) {
+  confettiParticles.forEach(p => {
+    p.x += p.vx * (dt / 16);
+    p.y += p.vy * (dt / 16);
+    p.rot += p.rotSpeed;
+    if (p.y > CANVAS_H + 20) {
+      p.y = -10;
+      p.x = Math.random() * CANVAS_W;
+    }
+  });
+}
+
+function drawConfetti() {
+  confettiParticles.forEach(p => {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rot);
+    ctx.fillStyle = p.color;
+    ctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+    ctx.restore();
+  });
+}
+
+// ============================================================
+//  SPEECH BUBBLE
+// ============================================================
+function drawSpeechBubble(ctx, x, y, w, h, text, text2) {
+  ctx.save();
+
+  // Bubble
+  ctx.fillStyle = '#fff';
+  ctx.strokeStyle = '#9c27b0';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.roundRect(x - w / 2, y - h / 2, w, h, 16);
+  ctx.fill();
+  ctx.stroke();
+
+  // Pointer
+  ctx.fillStyle = '#fff';
+  ctx.strokeStyle = '#9c27b0';
+  ctx.beginPath();
+  ctx.moveTo(x - 12, y + h / 2 - 2);
+  ctx.lineTo(x - 20, y + h / 2 + 18);
+  ctx.lineTo(x + 5, y + h / 2 - 2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Text
+  ctx.fillStyle = '#4a148c';
+  ctx.font = 'bold 16px "Segoe UI", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, x, y - (text2 ? 10 : 0));
+  if (text2) {
+    ctx.font = '14px "Segoe UI", sans-serif';
+    ctx.fillText(text2, x, y + 12);
+  }
+
+  ctx.restore();
+}
+
+// ============================================================
+//  FINISH SCREEN
+// ============================================================
+function showFinish() {
+  gameState = 'FINISH';
+  hideHUD();
+
+  // Award points: correct answers × level multiplier
+  const earnedPoints = correctAnswers * selectedLevel;
+  totalPoints += earnedPoints;
+  saveTotalPoints(totalPoints);
+
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('finishScreen').classList.add('active');
+
+  const placeText = `${playerPlace}${getPlaceSuffix(playerPlace)}`;
+  document.getElementById('finishTitle').textContent =
+    playerPlace === 1 ? 'You Won!' : `You Finished ${placeText}!`;
+  document.getElementById('finishStats').textContent =
+    `You got ${correctAnswers}/${questionsAsked} questions right!`;
+  document.getElementById('finishPoints').textContent =
+    `+${earnedPoints} points earned! (Total: ${totalPoints})`;
+
+  // Show "Next Level" button if not already at max level
+  const btnNext = document.getElementById('btnNextLevel');
+  if (selectedLevel < 6) {
+    btnNext.style.display = '';
+    btnNext.textContent = `Next Level (Level ${selectedLevel + 1})`;
+  } else {
+    btnNext.style.display = 'none';
+  }
+
+  if (playerPlace <= 2) spawnConfetti();
+  finishAnimTime = 0;
+  drawFinishScreen();
+}
+
+function drawFinishScreen() {
+  const finCanvas = document.getElementById('finishCanvas');
+  const fctx = finCanvas.getContext('2d');
+  finishAnimTime += 16;
+
+  fctx.clearRect(0, 0, finCanvas.width, finCanvas.height);
+
+  // Starry background
+  fctx.fillStyle = 'transparent';
+  fctx.fillRect(0, 0, finCanvas.width, finCanvas.height);
+
+  // Scale based on place — bigger dragon overall
+  const scales = { 1: 2.8, 2: 2.1, 3: 1.4, 4: 1.0 };
+  const dragonScale = scales[playerPlace] || 1.0;
+
+  // Dragon flies in from left — center vertically in canvas
+  const targetX = finCanvas.width / 2 - 40;
+  const dragonX = Math.min(targetX, finishAnimTime * 1.8 - 120);
+  const dragonY = finCanvas.height / 2 + 30 * dragonScale;
+
+  drawDragon(fctx, dragonX, dragonY, dragonScale, finishAnimTime);
+
+  // Speech bubble
+  if (finishAnimTime > 500) {
+    const bubbleX = dragonX + 80 * dragonScale;
+    const bubbleY = dragonY - 50 * dragonScale;
+    const placeText = `You finished ${playerPlace}${getPlaceSuffix(playerPlace)} place!`;
+    const scoreText = `${correctAnswers}/${questionsAsked} questions correct!`;
+    drawSpeechBubble(fctx, bubbleX, bubbleY, 240, 60, placeText, scoreText);
+  }
+
+  // Confetti
+  if (playerPlace <= 2) {
+    updateConfetti(16);
+    confettiParticles.forEach(p => {
+      fctx.save();
+      fctx.translate(p.x, p.y);
+      fctx.rotate(p.rot);
+      fctx.fillStyle = p.color;
+      fctx.fillRect(-p.size / 2, -p.size / 4, p.size, p.size / 2);
+      fctx.restore();
+    });
+  }
+
+  if (gameState === 'FINISH') {
+    requestAnimationFrame(drawFinishScreen);
+  }
+}
+
+// ============================================================
+//  HUD HELPERS
+// ============================================================
+function hideHUD() {
+  document.getElementById('progressBarContainer').style.display = 'none';
+  document.getElementById('questionCounter').style.display = 'none';
+  document.getElementById('placeIndicator').style.display = 'none';
+  document.getElementById('powerIcons').style.display = 'none';
+}
+
+// ============================================================
+//  TITLE SCREEN ANIMATION
+// ============================================================
+let titleAnimTime = 0;
+function drawTitleCar() {
+  const tc = document.getElementById('titleCarCanvas');
+  const tctx = tc.getContext('2d');
+  titleAnimTime += 16;
+
+  tctx.clearRect(0, 0, tc.width, tc.height);
+
+  // Bouncing car
+  const bounce = Math.sin(titleAnimTime * 0.004) * 3;
+  drawCar(tctx, 40, 15 + bounce, 100, 50, 'pink', false, true, 0);
+
+  if (gameState === 'TITLE') {
+    requestAnimationFrame(drawTitleCar);
+  }
+}
+
+// ============================================================
+//  MAIN GAME LOOP
+// ============================================================
+function gameLoop(timestamp) {
+  if (!lastTime) lastTime = timestamp;
+  const dt = Math.min(timestamp - lastTime, 50);
+  lastTime = timestamp;
+
+  if (gameState === 'RACING') {
+    ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+    updateRace(dt);
+    drawRace();
+  }
+
+  animFrameId = requestAnimationFrame(gameLoop);
+}
+
+// ============================================================
+//  SCREEN TRANSITIONS
+// ============================================================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  const el = document.getElementById(id);
+  if (el) el.classList.add('active');
+}
+
+function startGame() {
+  gameState = 'RACING';
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('questionOverlay').classList.remove('active');
+  initRace();
+}
+
+// ============================================================
+//  EVENT LISTENERS
+// ============================================================
+document.getElementById('btnStart').addEventListener('click', () => {
+  gameState = 'SELECT';
+  showScreen('selectScreen');
+});
+
+document.getElementById('btnRace').addEventListener('click', () => {
+  startGame();
+});
+
+document.getElementById('btnRaceAgain').addEventListener('click', () => {
+  startGame();
+});
+
+document.getElementById('btnNextLevel').addEventListener('click', () => {
+  selectedLevel = Math.min(selectedLevel + 1, 6);
+  // Update the level selection UI to match
+  const levelGroup = document.getElementById('levelGroup');
+  levelGroup.querySelectorAll('.option-btn').forEach(b => {
+    b.classList.remove('selected');
+    if (parseInt(b.dataset.val) === selectedLevel) b.classList.add('selected');
+  });
+  startGame();
+});
+
+document.getElementById('btnPrizes').addEventListener('click', () => {
+  gameState = 'PRIZES';
+  showPrizeScreen('finishScreen');
+});
+
+document.getElementById('btnPrizeBack').addEventListener('click', () => {
+  gameState = 'FINISH';
+  showScreen('finishScreen');
+  drawFinishScreen();
+});
+
+document.getElementById('btnPrizeMainMenu').addEventListener('click', () => {
+  gameState = 'TITLE';
+  showScreen('titleScreen');
+  drawTitleCar();
+});
+
+document.getElementById('btnMainMenu').addEventListener('click', () => {
+  gameState = 'TITLE';
+  showScreen('titleScreen');
+  drawTitleCar();
+});
+
+// ============================================================
+//  PRIZE SCREEN
+// ============================================================
+let pendingRedeemPrize = null;
+
+function showPrizeScreen(returnScreen) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('prizeScreen').classList.add('active');
+
+  document.getElementById('prizeTotalPoints').textContent =
+    `Your Points: ${totalPoints}`;
+
+  const list = document.getElementById('prizeList');
+  list.innerHTML = '';
+
+  PRIZES.forEach(prize => {
+    const earned = totalPoints >= prize.points;
+    const item = document.createElement('div');
+    item.className = 'prize-item ' + (earned ? 'earned' : 'locked');
+    item.innerHTML = `
+      <span class="prize-icon">${earned ? '&#9733;' : '&#128274;'}</span>
+      <span class="prize-pts">${prize.points} pts</span>
+      <span>${prize.reward}</span>
+    `;
+    if (earned) {
+      item.addEventListener('click', () => {
+        pendingRedeemPrize = prize;
+        document.getElementById('redeemReward').textContent = prize.reward;
+        document.getElementById('redeemCost').textContent =
+          `This will use ${prize.points} of your ${totalPoints} points`;
+        document.getElementById('redeemModal').classList.add('active');
+      });
+    }
+    list.appendChild(item);
+  });
+
+  // Render prize bin
+  const bin = document.getElementById('prizeBin');
+  bin.innerHTML = '';
+  if (redeemedPrizes.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'prize-bin-empty';
+    empty.textContent = 'No prizes redeemed yet — keep racing!';
+    bin.appendChild(empty);
+  } else {
+    redeemedPrizes.forEach(reward => {
+      const item = document.createElement('div');
+      item.className = 'prize-bin-item';
+      item.innerHTML = `<span class="prize-icon">&#127942;</span><span>${reward}</span>`;
+      bin.appendChild(item);
+    });
+  }
+}
+
+document.getElementById('btnRedeemYes').addEventListener('click', () => {
+  if (pendingRedeemPrize) {
+    totalPoints -= pendingRedeemPrize.points;
+    saveTotalPoints(totalPoints);
+    redeemedPrizes.push(pendingRedeemPrize.reward);
+    saveRedeemedPrizes(redeemedPrizes);
+    pendingRedeemPrize = null;
+  }
+  document.getElementById('redeemModal').classList.remove('active');
+  showPrizeScreen('finishScreen');
+});
+
+document.getElementById('btnRedeemNo').addEventListener('click', () => {
+  pendingRedeemPrize = null;
+  document.getElementById('redeemModal').classList.remove('active');
+});
+
+// Option group selection
+function setupOptionGroup(groupId, setter) {
+  const group = document.getElementById(groupId);
+  group.querySelectorAll('.option-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      group.querySelectorAll('.option-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      setter(btn.dataset.val);
+    });
+  });
+}
+
+setupOptionGroup('categoryGroup', v => { selectedCategory = v; });
+setupOptionGroup('colorGroup', v => { selectedColor = v; });
+setupOptionGroup('driverGroup', v => { selectedDriver = parseInt(v); });
+setupOptionGroup('levelGroup', v => { selectedLevel = parseInt(v); });
+
+// ============================================================
+//  INITIALIZATION
+// ============================================================
+// Draw car previews
+document.querySelectorAll('.carPreview').forEach(cvs => {
+  drawCarPreview(cvs, cvs.dataset.color);
+});
+
+// Draw driver previews
+document.querySelectorAll('.driverPreview').forEach(cvs => {
+  drawDriverPreview(cvs, parseInt(cvs.dataset.driver));
+});
+
+// Start title animation
+drawTitleCar();
+
+// Start game loop
+animFrameId = requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
